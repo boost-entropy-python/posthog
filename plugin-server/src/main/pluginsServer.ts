@@ -36,7 +36,7 @@ const { version } = require('../../package.json')
 export type ServerInstance = {
     hub: Hub
     piscina: Piscina
-    queue: Queue
+    queue: Queue | null
     mmdb?: ReaderModel
     kafkaHealthcheckConsumer?: Consumer
     mmdbUpdateJob?: schedule.Job
@@ -60,7 +60,7 @@ export async function startPluginsServer(
     let pubSub: PubSub | undefined
     let hub: Hub | undefined
     let piscina: Piscina | undefined
-    let queue: Queue | undefined // ingestion queue
+    let queue: Queue | undefined | null // ingestion queue
     let redisQueueForPluginJobs: Queue | undefined | null
     let jobQueueConsumer: JobQueueConsumerControl | undefined
     let closeHub: () => Promise<void> | undefined
@@ -224,11 +224,6 @@ export async function startPluginsServer(
                 await hub!.internalMetrics?.flush(piscina!)
             })
         }
-
-        // Send plugin metrics every 30 seconds
-        schedule.scheduleJob('*/30 * * * *', async () => {
-            await piscina!.broadcastTask({ task: 'sendPluginMetrics' })
-        })
 
         if (serverConfig.STALENESS_RESTART_SECONDS > 0) {
             // check every 10 sec how long it has been since the last activity
