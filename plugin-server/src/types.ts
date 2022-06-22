@@ -269,9 +269,10 @@ export interface Plugin {
     url?: string
     config_schema: Record<string, PluginConfigSchema> | PluginConfigSchema[]
     tag?: string
-    archive: Buffer | null
     /** @deprecated Replaced with source__index_ts */
     source?: string
+    /** Cached source for plugin.json from a joined PluginSourceFile query */
+    source__plugin_json?: string
     /** Cached source for index.ts from a joined PluginSourceFile query */
     source__index_ts?: string
     /** Cached source for frontend.tsx from a joined PluginSourceFile query */
@@ -808,13 +809,6 @@ export interface RawAction {
 /** Usable Action model. */
 export interface Action extends RawAction {
     steps: ActionStep[]
-}
-
-/** Action<>Event mapping row. */
-export interface ActionEventPair {
-    id: number
-    action_id: Action['id']
-    event_id: Event['id']
 }
 
 export interface SessionRecordingEvent {
