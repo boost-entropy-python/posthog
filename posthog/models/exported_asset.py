@@ -1,4 +1,3 @@
-import gzip
 import secrets
 from datetime import timedelta
 from typing import Optional
@@ -35,6 +34,7 @@ class ExportedAsset(models.Model):
     export_format: models.CharField = models.CharField(max_length=16, choices=ExportFormat.choices)
     content: models.BinaryField = models.BinaryField(null=True)
     created_at: models.DateTimeField = models.DateTimeField(auto_now_add=True, blank=True)
+    created_by: models.ForeignKey = models.ForeignKey("User", on_delete=models.SET_NULL, null=True, blank=True)
     # for example holds filters for CSV exports
     export_context: models.JSONField = models.JSONField(null=True, blank=True)
     # path in object storage or some other location identifier for the asset
@@ -53,12 +53,13 @@ class ExportedAsset(models.Model):
     @property
     def filename(self):
         ext = self.export_format.split("/")[1]
-
         filename = "export"
 
-        if self.dashboard and self.dashboard.name is not None:
+        if self.export_context and self.export_context.get("filename"):
+            filename = slugify(self.export_context.get("filename"))
+        elif self.dashboard and self.dashboard.name is not None:
             filename = f"{filename}-{slugify(self.dashboard.name)}"
-        if self.insight:
+        elif self.insight:
             filename = f"{filename}-{slugify(self.insight.name or self.insight.derived_name)}"
 
         filename = f"{filename}.{ext}"
@@ -93,8 +94,7 @@ def asset_for_token(token: str) -> ExportedAsset:
 def get_content_response(asset: ExportedAsset, download: bool = False):
     content = asset.content
     if not content and asset.content_location:
-        content_bytes = object_storage.read_bytes(asset.content_location)
-        content = gzip.decompress(content_bytes)
+        content = object_storage.read(asset.content_location)
 
     res = HttpResponse(content, content_type=asset.export_format)
     if download:
