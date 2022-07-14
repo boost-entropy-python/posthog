@@ -70,7 +70,15 @@ def update_cache_item(key: str, cache_type: CacheType, payload: dict) -> List[Di
     elif insight_result is not None:
         result = insight_result
     else:
-        statsd.incr("update_cache_item_no_results", tags={"team": team_id, "cache_key": key})
+        statsd.incr(
+            "update_cache_item_no_results",
+            tags={
+                "team": team_id,
+                "cache_key": key,
+                "insight_id": payload.get("insight_id", "unknown"),
+                "dashboard_id": payload.get("dashboard_id", None),
+            },
+        )
         return []
 
     return result
@@ -104,10 +112,47 @@ def _update_cache_for_queryset(
 
 def update_insight_cache(insight: Insight, dashboard: Optional[Dashboard]) -> List[Dict[str, Any]]:
     cache_key, cache_type, payload = insight_update_task_params(insight, dashboard)
-    # cache key changed, usually because of a new default filter
+    # check if the cache key has changed, usually because of a new default filter
+    # there are three possibilities
+    # 1) the insight is not being updated in a dashboard context
+    #    --> so set its cache key if it doesn't match
+    # 2) the insight is being updated in a dashboard context and the dashboard has different filters to the insight
+    #    --> so set only the dashboard tile's filters_hash
+    # 3) the insight is being updated in a dashboard context and the dashboard has matching or no filters
+    #    --> so set the dashboard tile and the insight's filters hash
+
+    should_update_insight_filters_hash = False
+    should_update_dashboard_tile_filters_hash = False
+
     if not dashboard and insight.filters_hash and insight.filters_hash != cache_key:
+        should_update_insight_filters_hash = True
+
+    if dashboard:
+        should_update_dashboard_tile_filters_hash = True
+        if not dashboard.filters or dashboard.filters == insight.filters:
+            should_update_insight_filters_hash = True
+
+    if should_update_insight_filters_hash:
         insight.filters_hash = cache_key
         insight.save()
+
+    if should_update_dashboard_tile_filters_hash:
+        dashboard_tiles = DashboardTile.objects.filter(insight=insight, dashboard=dashboard,).exclude(
+            filters_hash=cache_key
+        )
+        dashboard_tiles.update(filters_hash=cache_key)
+
+    if should_update_insight_filters_hash or should_update_dashboard_tile_filters_hash:
+        statsd.incr(
+            "update_cache_item_set_new_cache_key",
+            tags={
+                "team": insight.team.id,
+                "cache_key": cache_key,
+                "insight_id": insight.id,
+                "dashboard_id": None if not dashboard else dashboard.id,
+            },
+        )
+
     result = update_cache_item(cache_key, cache_type, payload)
     insight.refresh_from_db()
     return result
@@ -186,6 +231,8 @@ def update_cached_items() -> Tuple[int, int]:
     taskset = group(tasks)
     taskset.apply_async()
     queue_depth = dashboard_tiles.count() + shared_insights.count()
+    statsd.gauge("update_cache_queue_depth.shared_insights", shared_insights.count())
+    statsd.gauge("update_cache_queue_depth.dashboards", dashboard_tiles.count())
     statsd.gauge("update_cache_queue_depth", queue_depth)
 
     return len(tasks), queue_depth
@@ -196,11 +243,17 @@ def insight_update_task_params(insight: Insight, dashboard: Optional[Dashboard] 
     cache_key = generate_cache_key("{}_{}".format(filter.toJSON(), insight.team_id))
 
     cache_type = get_cache_type(filter)
-    payload = {"filter": filter.toJSON(), "team_id": insight.team_id}
+    payload = {
+        "filter": filter.toJSON(),
+        "team_id": insight.team_id,
+        "insight_id": insight.id,
+        "dashboard_id": None if not dashboard else dashboard.id,
+    }
 
     return cache_key, cache_type, payload
 
 
+@timed("update_cache_item_timer.calculate_by_filter")
 def _calculate_by_filter(filter: FilterType, key: str, team: Team, cache_type: CacheType) -> List[Dict[str, Any]]:
     insight_class = CACHE_TYPE_TO_INSIGHT_CLASS[cache_type]
 
@@ -211,6 +264,7 @@ def _calculate_by_filter(filter: FilterType, key: str, team: Team, cache_type: C
     return result
 
 
+@timed("update_cache_item_timer.calculate_funnel")
 def _calculate_funnel(filter: Filter, key: str, team: Team) -> List[Dict[str, Any]]:
     if filter.funnel_viz_type == FunnelVizType.TRENDS:
         result = ClickhouseFunnelTrends(team=team, filter=filter).run()
