@@ -29,7 +29,7 @@ export function getDefaultConfig(): PluginsServerConfig {
         CLICKHOUSE_CA: null,
         CLICKHOUSE_SECURE: false,
         CLICKHOUSE_DISABLE_EXTERNAL_SCHEMAS: true,
-        KAFKA_HOSTS: 'kafka:9092', // KEEP IN SYNC WITH posthog/settings/data_stores.py
+        KAFKA_HOSTS: 'localhost:9092', // KEEP IN SYNC WITH posthog/settings/data_stores.py
         KAFKA_CLIENT_CERT_B64: null,
         KAFKA_CLIENT_CERT_KEY_B64: null,
         KAFKA_TRUSTED_CERT_B64: null,
@@ -160,8 +160,6 @@ export function getConfigHelp(): Record<keyof PluginsServerConfig, string> {
             'corresponds to the piscina useAtomics config option (https://github.com/piscinajs/piscina#constructor-new-piscinaoptions)',
         PISCINA_ATOMICS_TIMEOUT:
             '(advanced) corresponds to the length of time a piscina worker should block for when looking for tasks',
-        NEW_PERSON_PROPERTIES_UPDATE_ENABLED_TEAMS:
-            '(advanced) teams for which to run the new person properties update flow on',
         EXPERIMENTAL_EVENTS_LAST_SEEN_ENABLED: '(advanced) enable experimental feature to track lastSeenAt',
         EXPERIMENTAL_EVENT_PROPERTY_TRACKER_ENABLED: '(advanced) enable experimental feature to track event properties',
         MAX_PENDING_PROMISES_PER_WORKER:
