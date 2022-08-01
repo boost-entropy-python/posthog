@@ -40,7 +40,7 @@ import { eventUsageLogic } from 'lib/utils/eventUsageLogic'
 function SitePopoverSection({ title, children }: { title?: string | JSX.Element; children: any }): JSX.Element {
     return (
         <div className="SitePopover__section">
-            {title && <h5 className="flex-center">{title}</h5>}
+            {title && <h5 className="flex items-center">{title}</h5>}
             {children}
         </div>
     )
@@ -336,7 +336,12 @@ export function SitePopover(): JSX.Element {
                 </>
             }
         >
-            <div className="SitePopover__crumb" onClick={toggleSitePopover} data-attr="top-menu-toggle">
+            <div
+                data-tooltip="profile-button"
+                className="SitePopover__crumb"
+                onClick={toggleSitePopover}
+                data-attr="top-menu-toggle"
+            >
                 <div
                     className="SitePopover__profile-picture"
                     title={!systemStatus ? 'Potential system issue' : expired ? 'License expired' : undefined}
