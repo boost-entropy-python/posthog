@@ -83,8 +83,10 @@ def create_event(
 
 def format_clickhouse_timestamp(
     raw_timestamp: Optional[Union[timezone.datetime, str]],
-    default=timezone.now(),
+    default=None,
 ) -> str:
+    if default is None:
+        default = timezone.now()
     parsed_datetime = (
         isoparse(raw_timestamp) if isinstance(raw_timestamp, str) else (raw_timestamp or default).astimezone(pytz.utc)
     )
@@ -351,7 +353,7 @@ def get_agg_event_count_for_teams(team_ids: List[Union[str, int]]) -> int:
 
 
 def get_agg_event_count_for_teams_and_period(
-    team_ids: List[Union[str, int]], begin: timezone.datetime, end: timezone.datetime
+    team_ids: List[int], begin: timezone.datetime, end: timezone.datetime
 ) -> int:
     result = sync_execute(
         """
