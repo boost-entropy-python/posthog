@@ -231,9 +231,10 @@ export async function startPluginsServer(
 
         if (hub.capabilities.ingestion) {
             bufferConsumer = await startAnonymousEventBufferConsumer({
+                hub: hub,
+                piscina: piscina,
                 kafka: hub.kafka,
                 producer: hub.kafkaProducer,
-                graphileWorker: hub.graphileWorker,
                 statsd: hub.statsd,
             })
         }
@@ -266,6 +267,10 @@ export async function startPluginsServer(
                     await piscina.broadcastTask({ task: 'reloadSchedule' })
                     hub.pluginSchedule = await loadPluginSchedule(piscina)
                 }
+            },
+            ['reload-actions']: async () => {
+                status.info('⚡', 'Reloading actions!')
+                await piscina?.broadcastTask({ task: 'reloadAllActions' })
             },
             'reset-available-features-cache': async (message) => {
                 await piscina?.broadcastTask({ task: 'resetAvailableFeaturesCache', args: JSON.parse(message) })
