@@ -40,7 +40,7 @@ import { PluginsApiKeyManager } from './../../worker/vm/extensions/helpers/api-k
 import { RootAccessManager } from './../../worker/vm/extensions/helpers/root-acess-manager'
 import { PromiseManager } from './../../worker/vm/promise-manager'
 import { DB } from './db'
-import { DependencyUnavailable } from './error'
+import { DependencyUnavailableError } from './error'
 import { KafkaProducerWrapper } from './kafka-producer-wrapper'
 
 const { version } = require('../../../package.json')
@@ -79,10 +79,6 @@ export async function createHub(
 
     const conversionBufferEnabledTeams = new Set(
         serverConfig.CONVERSION_BUFFER_ENABLED_TEAMS.split(',').filter(String).map(Number)
-    )
-
-    const conversionBufferTopicEnabledTeams = new Set(
-        serverConfig.CONVERSION_BUFFER_TOPIC_ENABLED_TEAMS.split(',').filter(String).map(Number)
     )
 
     if (serverConfig.STATSD_HOST) {
@@ -251,11 +247,11 @@ export async function createHub(
         } catch (error) {
             if (error instanceof KafkaJSError) {
                 // If we get a retriable Kafka error (maybe it's down for
-                // example), rethrow the error as a generic `DependencyUnavailable`
+                // example), rethrow the error as a generic `DependencyUnavailableError`
                 // passing through retriable such that we can decide if this is
                 // something we should retry at the consumer level.
                 if (error.retriable) {
-                    throw new DependencyUnavailable(error.message, 'Kafka', error)
+                    throw new DependencyUnavailableError(error.message, 'Kafka', error)
                 }
             }
 
@@ -295,7 +291,6 @@ export async function createHub(
         actionManager,
         actionMatcher: new ActionMatcher(db, actionManager, statsd),
         conversionBufferEnabledTeams,
-        conversionBufferTopicEnabledTeams,
     }
 
     // :TODO: This is only used on worker threads, not main
