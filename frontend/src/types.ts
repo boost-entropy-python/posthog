@@ -398,9 +398,14 @@ export enum ExperimentStatus {
 }
 
 export enum PropertyFilterType {
+    /** Event metadata and fields on the clickhouse events table */
+    Meta = 'meta',
+    /** Event properties */
     Event = 'event',
+    /** Person properties */
     Person = 'person',
     Element = 'element',
+    /** Event property with "$feature/" prepended */
     Feature = 'feature',
     Session = 'session',
     Cohort = 'cohort',
@@ -414,7 +419,6 @@ interface BasePropertyFilter {
     value: PropertyFilterValue
     label?: string
     type?: PropertyFilterType
-    group_type_index?: number | null
 }
 
 /** Sync with plugin-server/src/types.ts */
@@ -449,6 +453,17 @@ export interface CohortPropertyFilter extends BasePropertyFilter {
     value: number
 }
 
+export interface GroupPropertyFilter extends BasePropertyFilter {
+    type: PropertyFilterType.Group
+    group_type_index?: number | null
+    operator: PropertyOperator
+}
+
+export interface FeaturePropertyFilter extends BasePropertyFilter {
+    type: PropertyFilterType.Feature
+    operator: PropertyOperator
+}
+
 export type PropertyFilter =
     | EventPropertyFilter
     | PersonPropertyFilter
@@ -456,6 +471,8 @@ export type PropertyFilter =
     | SessionPropertyFilter
     | CohortPropertyFilter
     | RecordingDurationFilter
+    | GroupPropertyFilter
+    | FeaturePropertyFilter
 
 export type AnyPropertyFilter =
     | Partial<EventPropertyFilter>
@@ -464,6 +481,8 @@ export type AnyPropertyFilter =
     | Partial<SessionPropertyFilter>
     | Partial<CohortPropertyFilter>
     | Partial<RecordingDurationFilter>
+    | Partial<GroupPropertyFilter>
+    | Partial<FeaturePropertyFilter>
 
 export type AnyFilterLike = AnyPropertyFilter | PropertyGroupFilter | PropertyGroupFilterValue
 
@@ -841,6 +860,9 @@ export interface SessionRecordingType {
     person?: PersonType
     /** List of static playlists that this recording is referenced on */
     playlists?: SessionRecordingPlaylistType['id'][]
+    click_count?: number
+    keypress_count?: number
+    urls?: string[]
 }
 
 export interface SessionRecordingPropertiesType {
