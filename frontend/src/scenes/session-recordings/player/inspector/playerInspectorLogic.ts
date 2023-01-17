@@ -84,6 +84,7 @@ export const playerInspectorLogic = kea<playerInspectorLogicType>([
                 'sessionPlayerData',
                 'sessionPlayerMetaData',
                 'sessionPlayerMetaDataLoading',
+                'sessionPlayerSnapshotDataLoading',
                 'sessionEventsData',
                 'sessionEventsDataLoading',
                 'windowIds',
@@ -146,18 +147,6 @@ export const playerInspectorLogic = kea<playerInspectorLogicType>([
     })),
 
     selectors(({}) => ({
-        loading: [
-            (s) => [s.sessionEventsDataLoading, s.performanceEventsLoading, s.sessionPlayerMetaDataLoading],
-            (sessionEventsDataLoading, performanceEventsLoading, sessionPlayerMetaDataLoading) => {
-                return {
-                    [SessionRecordingPlayerTab.ALL]: false,
-                    [SessionRecordingPlayerTab.EVENTS]: sessionEventsDataLoading,
-                    [SessionRecordingPlayerTab.CONSOLE]: sessionPlayerMetaDataLoading,
-                    [SessionRecordingPlayerTab.PERFORMANCE]: performanceEventsLoading,
-                }
-            },
-        ],
-
         recordingTimeInfo: [
             (s) => [s.sessionPlayerMetaData],
             (sessionPlayerMetaData): { start: Dayjs; end: Dayjs; duration: number } => {
@@ -256,14 +245,18 @@ export const playerInspectorLogic = kea<playerInspectorLogicType>([
                     !!featureFlags[FEATURE_FLAGS.RECORDINGS_INSPECTOR_PERFORMANCE] &&
                     (tab === SessionRecordingPlayerTab.ALL || tab === SessionRecordingPlayerTab.PERFORMANCE)
                 ) {
-                    for (const event of performanceEvents || []) {
+                    const performanceEventsArr = performanceEvents || []
+                    for (const event of performanceEventsArr) {
                         const timestamp = dayjs(event.timestamp)
                         const responseStatus = event.response_status || 200
 
                         // NOTE: Navigtion events are missing the first contentful paint info so we find the relevant first contentful paint event and add it to the navigation event
                         if (event.entry_type === 'navigation' && !event.first_contentful_paint) {
-                            const firstContentfulPaint = (performanceEvents || []).find(
-                                (x) => x.entry_type === 'paint' && x.name === 'first-contentful-paint'
+                            const firstContentfulPaint = performanceEventsArr.find(
+                                (x) =>
+                                    x.pageview_id === event.pageview_id &&
+                                    x.entry_type === 'paint' &&
+                                    x.name === 'first-contentful-paint'
                             )
                             if (firstContentfulPaint) {
                                 event.first_contentful_paint = firstContentfulPaint.start_time
@@ -489,6 +482,49 @@ export const playerInspectorLogic = kea<playerInspectorLogicType>([
                 items.sort((a, b) => (a.timestamp.isAfter(b.timestamp) ? 1 : -1))
 
                 return items
+            },
+        ],
+
+        tabsState: [
+            (s) => [
+                s.sessionEventsDataLoading,
+                s.performanceEventsLoading,
+                s.sessionPlayerMetaDataLoading,
+                s.sessionPlayerSnapshotDataLoading,
+                s.sessionEventsData,
+                s.consoleLogs,
+                s.performanceEvents,
+            ],
+            (
+                sessionEventsDataLoading,
+                performanceEventsLoading,
+                sessionPlayerMetaDataLoading,
+                sessionPlayerSnapshotDataLoading,
+                events,
+                logs,
+                performanceEvents
+            ): Record<SessionRecordingPlayerTab, 'loading' | 'ready' | 'empty'> => {
+                return {
+                    [SessionRecordingPlayerTab.ALL]: 'ready',
+                    [SessionRecordingPlayerTab.EVENTS]:
+                        sessionEventsDataLoading || !events?.events
+                            ? 'loading'
+                            : events?.events.length
+                            ? 'ready'
+                            : 'empty',
+                    [SessionRecordingPlayerTab.CONSOLE]:
+                        sessionPlayerMetaDataLoading || sessionPlayerSnapshotDataLoading || !logs
+                            ? 'loading'
+                            : logs.length
+                            ? 'ready'
+                            : 'empty',
+                    [SessionRecordingPlayerTab.PERFORMANCE]:
+                        performanceEventsLoading || !performanceEvents
+                            ? 'loading'
+                            : performanceEvents.length
+                            ? 'ready'
+                            : 'empty',
+                }
             },
         ],
 
