@@ -586,7 +586,7 @@ export enum SessionRecordingPlayerTab {
     ALL = 'all',
     EVENTS = 'events',
     CONSOLE = 'console',
-    PERFORMANCE = 'performance',
+    NETWORK = 'network',
 }
 
 export enum SessionPlayerState {
@@ -1819,6 +1819,7 @@ export interface FeatureFlagFilters {
     groups: FeatureFlagGroupType[]
     multivariate: MultivariateFlagOptions | null
     aggregation_group_type_index?: number | null
+    payloads: Record<string, JsonType>
 }
 
 export interface FeatureFlagType {
@@ -2347,6 +2348,10 @@ export enum CountPerActorMathType {
     P99 = 'p99_count_per_actor',
 }
 
+export enum GroupMathType {
+    UniqueGroup = 'unique_group',
+}
+
 export enum ActorGroupType {
     Person = 'person',
     GroupPrefix = 'group',
@@ -2573,3 +2578,5 @@ export interface RecordingReportLoadTimes {
     performanceEvents: RecordingReportLoadTimeRow
     firstPaint: RecordingReportLoadTimeRow
 }
+
+export type JsonType = string | number | boolean | null | { [key: string]: JsonType } | Array<JsonType>
