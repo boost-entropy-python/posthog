@@ -89,6 +89,7 @@ export function getDefaultConfig(): PluginsServerConfig {
         SITE_URL: null,
         MAX_PENDING_PROMISES_PER_WORKER: 100,
         KAFKA_PARTITIONS_CONSUMED_CONCURRENTLY: 1,
+        RECORDING_PARTITIONS_CONSUMED_CONCURRENTLY: 5,
         CLICKHOUSE_DISABLE_EXTERNAL_SCHEMAS_TEAMS: '',
         CLICKHOUSE_JSON_EVENTS_KAFKA_TOPIC: KAFKA_EVENTS_JSON,
         CONVERSION_BUFFER_ENABLED: isDevEnv() ? true : !isTestEnv(),
@@ -224,9 +225,17 @@ export function overrideWithEnv(
     }
 
     if (
-        !['ingestion', 'async', 'exports', 'scheduler', 'jobs', 'ingestion-overflow', null].includes(
-            newConfig.PLUGIN_SERVER_MODE
-        )
+        ![
+            'ingestion',
+            'async',
+            'exports',
+            'scheduler',
+            'jobs',
+            'ingestion-overflow',
+            'analytics-ingestion',
+            'recordings-ingestion',
+            null,
+        ].includes(newConfig.PLUGIN_SERVER_MODE)
     ) {
         throw Error(`Invalid PLUGIN_SERVER_MODE ${newConfig.PLUGIN_SERVER_MODE}`)
     }
