@@ -351,8 +351,8 @@ class RecentPerformancePageViewNode(BaseModel):
     class Config:
         extra = Extra.forbid
 
+    dateRange: DateRange
     kind: str = Field("RecentPerformancePageViewNode", const=True, description="Performance")
-    numberOfDays: Optional[float] = None
     response: Optional[Dict[str, Any]] = Field(None, description="Cached query response")
 
 
@@ -567,9 +567,7 @@ class LifecycleFilter(BaseModel):
 
     show_values_on_series: Optional[bool] = None
     shown_as: Optional[ShownAsValue] = None
-    toggledLifecycles: Optional[List[LifecycleToggle]] = Field(
-        None, description="Lifecycles that have been removed from display"
-    )
+    toggledLifecycles: Optional[List[LifecycleToggle]] = None
 
 
 class PersonPropertyFilter(BaseModel):
@@ -1332,6 +1330,7 @@ class AnyPartialFilterTypeItem5(BaseModel):
     sampling_factor: Optional[float] = None
     show_values_on_series: Optional[bool] = None
     shown_as: Optional[ShownAsValue] = None
+    toggledLifecycles: Optional[List[LifecycleToggle]] = None
 
 
 class AnyPartialFilterTypeItem6(BaseModel):
