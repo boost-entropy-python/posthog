@@ -42,6 +42,17 @@ class Ref(AST):
         return self.get_child(name) is not None
 
 
+class Expr(AST):
+    ref: Optional[Ref]
+
+
+class Macro(Expr):
+    name: str
+    expr: Expr
+    # Whether the macro is an inlined column "SELECT 1 AS a" or a subquery "SELECT a AS (SELECT 1)"
+    type: Literal["column", "subquery"]
+
+
 class FieldAliasRef(Ref):
     name: str
     ref: Ref
@@ -120,6 +131,7 @@ class SelectQueryRef(Ref):
     tables: Dict[
         str, Union[BaseTableRef, "SelectUnionQueryRef", "SelectQueryRef", "SelectQueryAliasRef"]
     ] = PydanticField(default_factory=dict)
+    macros: Dict[str, Macro] = PydanticField(default_factory=dict)
     # all from and join subqueries without aliases
     anonymous_tables: List[Union["SelectQueryRef", "SelectUnionQueryRef"]] = PydanticField(default_factory=list)
 
@@ -232,10 +244,6 @@ class PropertyRef(Ref):
         return False
 
 
-class Expr(AST):
-    ref: Optional[Ref]
-
-
 class Alias(Expr):
     alias: str
     expr: Expr
@@ -316,6 +324,7 @@ class Placeholder(Expr):
 class Call(Expr):
     name: str
     args: List[Expr]
+    distinct: Optional[bool] = None
 
 
 class JoinExpr(Expr):
@@ -325,11 +334,12 @@ class JoinExpr(Expr):
     table_final: Optional[bool] = None
     constraint: Optional[Expr] = None
     next_join: Optional["JoinExpr"] = None
+    sample: Optional["SampleExpr"] = None
 
 
 class SelectQuery(Expr):
     ref: Optional[SelectQueryRef] = None
-
+    macros: Optional[Dict[str, Macro]] = None
     select: List[Expr]
     distinct: Optional[bool] = None
     select_from: Optional[JoinExpr] = None
@@ -349,5 +359,17 @@ class SelectUnionQuery(Expr):
     select_queries: List[SelectQuery]
 
 
+class RatioExpr(Expr):
+    left: Constant
+    right: Optional[Constant] = None
+
+
+class SampleExpr(Expr):
+    # k or n
+    sample_value: RatioExpr
+    offset_value: Optional[RatioExpr]
+
+
+JoinExpr.update_forward_refs(SampleExpr=SampleExpr)
 JoinExpr.update_forward_refs(SelectUnionQuery=SelectUnionQuery)
 JoinExpr.update_forward_refs(SelectQuery=SelectQuery)
