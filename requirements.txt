@@ -82,7 +82,7 @@ deprecated==1.2.13
     # via redis
 dj-database-url==0.5.0
     # via -r requirements.in
-django==3.2.16
+django==3.2.18
     # via
     #   -r requirements.in
     #   django-axes
@@ -369,9 +369,6 @@ typing-extensions==4.4.0
     #   pydantic
     #   qrcode
     #   temporalio
-    #   typing-inspect
-typing-inspect==0.7.1
-    # via dataclasses-json
 tzlocal==2.1
     # via clickhouse-driver
 unicodecsv==0.14.1
