@@ -2219,7 +2219,6 @@ interface BaseExperimentResults {
     significance_code: SignificanceCode
     expected_loss?: number
     p_value?: number
-    secondary_metric_results?: SecondaryMetricAPIResult[]
     variants: ExperimentVariant[]
 }
 
@@ -2245,11 +2244,6 @@ export interface FunnelExperimentResults {
 }
 
 export type ExperimentResults = TrendsExperimentResults | FunnelExperimentResults
-
-export interface SecondaryMetricAPIResult {
-    name: string
-    result: Record<string, number>
-}
 
 export interface SecondaryExperimentMetric {
     name: string
@@ -2349,6 +2343,7 @@ export enum HelpType {
     Email = 'email',
     Docs = 'docs',
     Updates = 'updates',
+    SupportForm = 'support_form',
 }
 
 export interface VersionType {
