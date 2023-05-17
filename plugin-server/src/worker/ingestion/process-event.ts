@@ -128,7 +128,7 @@ export class EventsProcessor {
         try {
             await this.propertyDefinitionsManager.updateEventNamesAndProperties(team.id, event, properties)
         } catch (err) {
-            Sentry.captureException(err)
+            Sentry.captureException(err, { tags: { team_id: team.id } })
             status.warn('⚠️', 'Failed to update property definitions for an event', {
                 event,
                 properties,
@@ -311,7 +311,8 @@ export const createSessionReplayEvent = (
             session_id: properties['$session_id'],
             properties: properties,
         })
-        return null
+        // it is safe to throw here as it caught a level up so that we can see this happening in Sentry
+        throw new Error('ignoring an empty session recording event')
     }
 
     let clickCount = 0
