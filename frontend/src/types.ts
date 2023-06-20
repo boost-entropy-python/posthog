@@ -99,6 +99,7 @@ export enum ProductKey {
     INGESTION_WARNINGS = 'ingestion_warnings',
     PERSONS = 'persons',
     SURVEYS = 'surveys',
+    EARLY_ACCESS_FEATURES = 'early_access_features',
 }
 
 export enum LicensePlan {
@@ -694,7 +695,6 @@ export interface RecordingFilters {
     events?: FilterType['events']
     actions?: FilterType['actions']
     properties?: AnyPropertyFilter[]
-    offset?: number
     session_recording_duration?: RecordingDurationFilter
     duration_type_filter?: DurationTypeFilter
     console_logs?: FilterableLogLevel[]
@@ -2004,6 +2004,7 @@ export interface Survey {
     name: string
     description: string
     type: SurveyType
+    linked_flag_id: number | null
     linked_flag: FeatureFlagBasicType | null
     targeting_flag: FeatureFlagBasicType | null
     targeting_flag_filters: Pick<FeatureFlagFilters, 'groups'> | undefined
