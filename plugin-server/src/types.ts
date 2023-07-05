@@ -30,7 +30,6 @@ import { EventPipelineResult } from './worker/ingestion/event-pipeline/runner'
 import { HookCommander } from './worker/ingestion/hooks'
 import { OrganizationManager } from './worker/ingestion/organization-manager'
 import { EventsProcessor } from './worker/ingestion/process-event'
-import { SiteUrlManager } from './worker/ingestion/site-url-manager'
 import { TeamManager } from './worker/ingestion/team-manager'
 import { PluginsApiKeyManager } from './worker/vm/extensions/helpers/api-key-manager'
 import { RootAccessManager } from './worker/vm/extensions/helpers/root-acess-manager'
@@ -171,7 +170,9 @@ export interface PluginsServerConfig {
         | 'ingestion'
         | 'ingestion-overflow'
         | 'async'
-        | 'exports'
+        | 'async-onevent'
+        | 'async-webhooks'
+        | 'exports' // TODO: remove once onevent and webhooks split is out
         | 'jobs'
         | 'scheduler'
         | 'analytics-ingestion'
@@ -237,7 +238,6 @@ export interface Hub extends PluginsServerConfig {
     actionMatcher: ActionMatcher
     hookCannon: HookCommander
     eventsProcessor: EventsProcessor
-    siteUrlManager: SiteUrlManager
     appMetrics: AppMetrics
     // geoip database, setup in workers
     mmdb?: ReaderModel
@@ -256,6 +256,8 @@ export interface PluginServerCapabilities {
     pluginScheduledTasks?: boolean
     processPluginJobs?: boolean
     processAsyncHandlers?: boolean
+    processAsyncOnEventHandlers?: boolean
+    processAsyncWebhooksHandlers?: boolean
     sessionRecordingIngestion?: boolean
     sessionRecordingBlobIngestion?: boolean
     http?: boolean
@@ -441,7 +443,8 @@ export interface PluginTask {
 }
 
 export type WorkerMethods = {
-    runAsyncHandlersEventPipeline: (event: PostIngestionEvent) => Promise<void>
+    runAppsOnEventPipeline: (event: PostIngestionEvent) => Promise<void>
+    runWebhooksHandlersEventPipeline: (event: PostIngestionEvent) => Promise<void>
     runEventPipeline: (event: PipelineEvent) => Promise<EventPipelineResult>
 }
 
