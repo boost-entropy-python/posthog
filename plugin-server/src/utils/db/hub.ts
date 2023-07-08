@@ -164,7 +164,7 @@ export async function createHub(
     const organizationManager = new OrganizationManager(postgres, teamManager)
     const pluginsApiKeyManager = new PluginsApiKeyManager(db)
     const rootAccessManager = new RootAccessManager(db)
-    const actionManager = new ActionManager(db, capabilities)
+    const actionManager = new ActionManager(postgres, capabilities)
     await actionManager.prepare()
 
     const enqueuePluginJob = async (job: EnqueuedPluginJob) => {
@@ -213,7 +213,7 @@ export async function createHub(
         rootAccessManager,
         promiseManager,
         actionManager,
-        actionMatcher: new ActionMatcher(db, actionManager, statsd),
+        actionMatcher: new ActionMatcher(postgres, actionManager, statsd),
         conversionBufferEnabledTeams,
     }
 
