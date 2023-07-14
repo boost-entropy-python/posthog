@@ -16,12 +16,6 @@ import { RealtimeManager } from './realtime-manager'
 import { IncomingRecordingMessage } from './types'
 import { convertToPersistedMessage, now } from './utils'
 
-export const counterRealtimeSnapshotSubscriptionStarted = new Counter({
-    name: 'realtime_snapshots_subscription_started_counter',
-    help: 'Indicates that this consumer received a request to subscribe to provide realtime snapshots for a session',
-    labelNames: ['team_id'],
-})
-
 export const counterS3FilesWritten = new Counter({
     name: 'recording_s3_files_written',
     help: 'A single file flushed to S3',
@@ -81,11 +75,6 @@ export class SessionManager {
         void realtimeManager.clearAllMessages(this.teamId, this.sessionId)
 
         this.unsubscribe = realtimeManager.onSubscriptionEvent(this.teamId, this.sessionId, () => {
-            status.info('🔌', 'blob_ingester_session_manager RealtimeManager subscribed to realtime snapshots', {
-                teamId,
-                sessionId,
-            })
-            counterRealtimeSnapshotSubscriptionStarted.inc({ team_id: teamId.toString() })
             void this.startRealtime()
         })
     }
@@ -143,7 +132,9 @@ export class SessionManager {
         const bufferAgeIsOverThreshold = bufferAgeFromReference >= flushThresholdMillis
         // check the in-memory age against a larger value than the flush threshold,
         // otherwise we'll flap between reasons for flushing when close to real-time processing
-        const sessionAgeIsOverThreshold = bufferAgeInMemory >= flushThresholdMillis * 2
+        const sessionAgeIsOverThreshold =
+            bufferAgeInMemory >=
+            flushThresholdMillis * this.serverConfig.SESSION_RECORDING_BUFFER_AGE_IN_MEMORY_MULTIPLIER
 
         logContext['bufferAgeInMemory'] = bufferAgeInMemory
         logContext['bufferAgeFromReference'] = bufferAgeFromReference
