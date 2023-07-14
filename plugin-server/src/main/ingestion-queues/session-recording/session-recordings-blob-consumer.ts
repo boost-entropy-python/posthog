@@ -37,7 +37,6 @@ require('@sentry/tracing')
 
 const groupId = 'session-recordings-blob'
 const sessionTimeout = 30000
-const fetchBatchSize = 500
 const flushIntervalTimeoutMs = 30000
 
 export const bufferFileDir = (root: string) => path.join(root, 'session-buffer-files')
@@ -88,7 +87,7 @@ const counterKafkaMessageReceived = new Counter({
 })
 
 export class SessionRecordingBlobIngester {
-    sessions: Map<string, SessionManager> = new Map()
+    sessions: Record<string, SessionManager> = {}
     private sessionOffsetHighWaterMark: SessionOffsetHighWaterMark
     realtimeManager: RealtimeManager
     batchConsumer?: BatchConsumer
@@ -96,6 +95,7 @@ export class SessionRecordingBlobIngester {
     flushInterval: NodeJS.Timer | null = null
     // the time at the most recent message of a particular partition
     partitionNow: Record<number, number | null> = {}
+    partitionLastKnownCommit: Record<number, number | null> = {}
     teamsRefresher: BackgroundRefresher<Record<string, TeamId>>
 
     constructor(
@@ -160,12 +160,12 @@ export class SessionRecordingBlobIngester {
                     drop_cause: 'high_water_mark',
                 })
                 .inc()
-            this.commitOffsets(topic, partition, session_id, [offset])
+
+            highWaterMarkSpan?.finish()
             return
         }
-        highWaterMarkSpan?.finish()
 
-        if (!this.sessions.has(key)) {
+        if (!this.sessions[key]) {
             const { partition, topic } = event.metadata
 
             const sessionManager = new SessionManager(
@@ -187,7 +187,7 @@ export class SessionRecordingBlobIngester {
                 }
             )
 
-            this.sessions.set(key, sessionManager)
+            this.sessions[key] = sessionManager
             status.info('📦', 'Blob ingestion consumer started session manager', {
                 key,
                 partition,
@@ -196,7 +196,7 @@ export class SessionRecordingBlobIngester {
             })
         }
 
-        this.sessions.get(key)?.add(event)
+        this.sessions[key]?.add(event)
         // TODO: If we error here, what should we do...?
         // If it is unrecoverable we probably want to remove the offset
         // If it is recoverable, we probably want to retry?
@@ -330,11 +330,16 @@ export class SessionRecordingBlobIngester {
             groupId,
             topic: KAFKA_SESSION_RECORDING_SNAPSHOT_ITEM_EVENTS,
             sessionTimeout,
+            // the largest size of a message that can be fetched by the consumer.
+            // the largest size our MSK cluster allows is 20MB
+            // we only use 9 or 10MB but there's no reason to limit this 🤷️
             consumerMaxBytes: this.serverConfig.KAFKA_CONSUMPTION_MAX_BYTES,
             consumerMaxBytesPerPartition: this.serverConfig.KAFKA_CONSUMPTION_MAX_BYTES_PER_PARTITION,
+            // our messages are very big, so we don't want to buffer too many
+            queuedMinMessages: this.serverConfig.SESSION_RECORDING_KAFKA_QUEUE_SIZE,
             consumerMaxWaitMs: this.serverConfig.KAFKA_CONSUMPTION_MAX_WAIT_MS,
             consumerErrorBackoffMs: this.serverConfig.KAFKA_CONSUMPTION_ERROR_BACKOFF_MS,
-            fetchBatchSize,
+            fetchBatchSize: this.serverConfig.SESSION_RECORDING_KAFKA_BATCH_SIZE,
             batchingTimeoutMs: this.serverConfig.KAFKA_CONSUMPTION_BATCHING_TIMEOUT_MS,
             autoCommit: false,
             eachBatch: async (messages) => {
@@ -370,7 +375,7 @@ export class SessionRecordingBlobIngester {
                     return
                 }
 
-                const sessionsToDrop = [...this.sessions.entries()].filter(([_, sessionManager]) =>
+                const sessionsToDrop = Object.entries(this.sessions).filter(([_, sessionManager]) =>
                     revokedPartitions.includes(sessionManager.partition)
                 )
 
@@ -415,7 +420,7 @@ export class SessionRecordingBlobIngester {
         this.flushInterval = setInterval(() => {
             status.info('🚽', `blob_ingester_session_manager flushInterval fired`)
 
-            for (const [key, sessionManager] of this.sessions) {
+            for (const [key, sessionManager] of Object.entries(this.sessions)) {
                 // in practice, we will always have a values for latestKafkaMessageTimestamp,
                 const referenceTime = this.partitionNow[sessionManager.partition]
                 if (!referenceTime) {
@@ -443,16 +448,13 @@ export class SessionRecordingBlobIngester {
 
                 // If the SessionManager is done (flushed and with no more queued events) then we remove it to free up memory
                 if (sessionManager.isEmpty) {
-                    this.sessions.delete(key)
+                    void this.destroySessions([[key, sessionManager]])
                 }
             }
 
-            gaugeSessionsHandled.set(this.sessions.size)
+            gaugeSessionsHandled.set(Object.keys(this.sessions).length)
             gaugeRealtimeSessions.set(
-                Array.from(this.sessions.values()).reduce(
-                    (acc, sessionManager) => acc + (sessionManager.realtime ? 1 : 0),
-                    0
-                )
+                Object.values(this.sessions).reduce((acc, sessionManager) => acc + (sessionManager.realtime ? 1 : 0), 0)
             )
 
             status.info('🚽', `blob_ingester_session_manager flushInterval completed`)
@@ -475,9 +477,9 @@ export class SessionRecordingBlobIngester {
         await this.batchConsumer?.stop()
 
         // This is inefficient but currently necessary due to new instances restarting from the committed offset point
-        await this.destroySessions([...this.sessions.entries()])
+        await this.destroySessions(Object.entries(this.sessions))
 
-        this.sessions = new Map()
+        this.sessions = {}
 
         gaugeRealtimeSessions.set(0)
     }
@@ -486,7 +488,7 @@ export class SessionRecordingBlobIngester {
         const destroyPromises: Promise<void>[] = []
 
         sessionsToDestroy.forEach(([key, sessionManager]) => {
-            this.sessions.delete(key)
+            delete this.sessions[key]
             destroyPromises.push(sessionManager.destroy())
         })
 
@@ -499,7 +501,7 @@ export class SessionRecordingBlobIngester {
     private commitOffsets(topic: string, partition: number, sessionId: string, offsets: number[]): void {
         let potentiallyBlockingSession: SessionManager | undefined
 
-        for (const [_, sessionManager] of this.sessions) {
+        for (const sessionManager of Object.values(this.sessions)) {
             if (sessionManager.partition === partition && sessionManager.topic === topic) {
                 const lowestOffset = sessionManager.getLowestOffset()
                 if (lowestOffset && lowestOffset < (potentiallyBlockingSession?.getLowestOffset() || Infinity)) {
@@ -509,23 +511,28 @@ export class SessionRecordingBlobIngester {
         }
 
         const potentiallyBlockingOffset = potentiallyBlockingSession?.getLowestOffset()
+
+        // If we have any other session for this topic-partition then we can only commit offsets that are lower than it
         const commitableOffsets = potentiallyBlockingOffset
             ? offsets.filter((offset) => offset < potentiallyBlockingOffset)
             : offsets
 
-        if (commitableOffsets.length === 0) {
-            // If there are no offsets to commit then we're done
-            status.info('🚫', `blob_ingester_consumer.commitOffsets - no offset to commit`, {
+        // Now we can commit the highest offset in our offsets list that is lower than the lowest offset in use
+        const highestOffsetToCommit = Math.max(...commitableOffsets, (potentiallyBlockingOffset || 0) - 1)
+
+        // Check that we haven't already commited a higher offset
+        if (this.partitionLastKnownCommit[partition] || 0 >= highestOffsetToCommit) {
+            status.warn('🚫', `blob_ingester_consumer.commitOffsets - offset already committed`, {
                 partition,
-                blockingSession: potentiallyBlockingSession?.sessionId,
-                lowestInflightOffset: potentiallyBlockingOffset,
-                lowestOffsetToRemove: offsets[0],
+                offsetToCommit: highestOffsetToCommit,
+                lastKnownCommit: this.partitionLastKnownCommit[partition],
+                sessionId,
             })
+
             return
         }
 
-        // Now we can commit the highest offset in our offsets list that is lower than the lowest offset in use
-        const highestOffsetToCommit = Math.max(...commitableOffsets, (potentiallyBlockingOffset || 0) - 1)
+        this.partitionLastKnownCommit[partition] = highestOffsetToCommit
 
         status.info('💾', `blob_ingester_consumer.commitOffsets - attempting to commit offset`, {
             partition,
@@ -549,8 +556,6 @@ export class SessionRecordingBlobIngester {
                 extra: { partition, offsetToCommit: highestOffsetToCommit, sessionId },
                 tags: { partition },
             })
-
-            throw e
         }
     }
 }
