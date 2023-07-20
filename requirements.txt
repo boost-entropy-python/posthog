@@ -6,7 +6,7 @@
 #
 aiochclient[aiohttp]==2.4.0
     # via -r requirements.in
-aiohttp==3.8.4
+aiohttp==3.8.5
     # via
     #   aiochclient
     #   geoip2
