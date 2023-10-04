@@ -9,7 +9,7 @@ import { retryOnDependencyUnavailableError } from '../../../../kafka/error-handl
 import { createKafkaProducer, disconnectProducer, flushProducer, produce } from '../../../../kafka/producer'
 import { PluginsServerConfig } from '../../../../types'
 import { status } from '../../../../utils/status'
-import { gatherConsoleLogEvents } from '../../../../worker/ingestion/process-event'
+import { ConsoleLogEntry, gatherConsoleLogEvents } from '../../../../worker/ingestion/process-event'
 import { eventDroppedCounter } from '../../metrics'
 import { IncomingRecordingMessage } from '../types'
 import { OffsetHighWaterMarker } from './offset-high-water-marker'
@@ -25,12 +25,12 @@ const consoleLogEventsCounter = new Counter({
 // am going to leave this duplication and then collapse it when/if we add a performance events ingester
 export class ConsoleLogsIngester {
     producer?: RdKafkaProducer
-    max_allowed_team: number
+    enabled: boolean
     constructor(
         private readonly serverConfig: PluginsServerConfig,
         private readonly persistentHighWaterMarker: OffsetHighWaterMarker
     ) {
-        this.max_allowed_team = serverConfig.MAX_TEAM_TO_ALLOW_SESSION_RECORDING_CONSOLE_LOGS_INGESTION
+        this.enabled = serverConfig.SESSION_RECORDING_CONSOLE_LOGS_INGESTION_ENABLED
     }
 
     public async consumeBatch(messages: IncomingRecordingMessage[]) {
@@ -82,6 +82,10 @@ export class ConsoleLogsIngester {
     }
 
     public async consume(event: IncomingRecordingMessage): Promise<Promise<number | null | undefined>[] | void> {
+        if (!this.enabled) {
+            return
+        }
+
         const warn = (text: string, labels: Record<string, any> = {}) =>
             status.warn('⚠️', `[console-log-events-ingester] ${text}`, {
                 offset: event.metadata.offset,
@@ -119,16 +123,12 @@ export class ConsoleLogsIngester {
             return drop('high_water_mark')
         }
 
-        if (event.team_id > this.max_allowed_team) {
-            return drop('team_above_max_allowed')
-        }
-
         try {
             const consoleLogEvents = gatherConsoleLogEvents(event.team_id, event.session_id, event.events)
 
             consoleLogEventsCounter.inc(consoleLogEvents.length)
 
-            return consoleLogEvents.map((cle) =>
+            return consoleLogEvents.map((cle: ConsoleLogEntry) =>
                 produce({
                     producer,
                     topic: KAFKA_LOG_ENTRIES,
