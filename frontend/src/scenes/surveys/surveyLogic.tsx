@@ -18,7 +18,8 @@ import {
     SurveyUrlMatchType,
 } from '~/types'
 import type { surveyLogicType } from './surveyLogicType'
-import { DataTableNode, InsightVizNode, NodeKind } from '~/queries/schema'
+import { DataTableNode, InsightVizNode, HogQLQuery, NodeKind } from '~/queries/schema'
+import { hogql } from '~/queries/utils'
 import { surveysLogic } from './surveysLogic'
 import { dayjs } from 'lib/dayjs'
 import { pluginsLogic } from 'scenes/plugins/pluginsLogic'
@@ -33,6 +34,7 @@ import {
     NEW_SURVEY,
     NewSurvey,
 } from './constants'
+import { sanitize } from 'dompurify'
 
 export interface SurveyLogicProps {
     id: string | 'new'
@@ -41,6 +43,12 @@ export interface SurveyLogicProps {
 export interface SurveyMetricsQueries {
     surveysShown: DataTableNode
     surveysDismissed: DataTableNode
+}
+
+export interface SurveyUserStats {
+    seen: number
+    dismissed: number
+    sent: number
 }
 
 export const surveyLogic = kea<surveyLogicType>([
@@ -87,8 +95,9 @@ export const surveyLogic = kea<surveyLogicType>([
         }),
         archiveSurvey: true,
         setCurrentQuestionIndexAndType: (idx: number, type: SurveyQuestionType) => ({ idx, type }),
+        setWritingHTMLDescription: (writingHTML: boolean) => ({ writingHTML }),
     }),
-    loaders(({ props, actions }) => ({
+    loaders(({ props, actions, values }) => ({
         survey: {
             loadSurvey: async () => {
                 if (props.id && props.id !== 'new') {
@@ -103,11 +112,11 @@ export const surveyLogic = kea<surveyLogicType>([
                 }
                 return { ...NEW_SURVEY }
             },
-            createSurvey: async (surveyPayload) => {
-                return await api.surveys.create(surveyPayload)
+            createSurvey: async (surveyPayload: Partial<Survey>) => {
+                return await api.surveys.create(sanitizeQuestions(surveyPayload))
             },
-            updateSurvey: async (surveyPayload) => {
-                return await api.surveys.update(props.id, surveyPayload)
+            updateSurvey: async (surveyPayload: Partial<Survey>) => {
+                return await api.surveys.update(props.id, sanitizeQuestions(surveyPayload))
             },
             launchSurvey: async () => {
                 const startDate = dayjs()
@@ -118,6 +127,49 @@ export const surveyLogic = kea<surveyLogicType>([
             },
             resumeSurvey: async () => {
                 return await api.surveys.update(props.id, { end_date: null })
+            },
+        },
+        surveyUserStats: {
+            loadSurveyUserStats: async (): Promise<SurveyUserStats> => {
+                const { survey } = values
+                const startDate = dayjs((survey as Survey).created_at).format('YYYY-MM-DD')
+                const endDate = survey.end_date
+                    ? dayjs(survey.end_date).add(1, 'day').format('YYYY-MM-DD')
+                    : dayjs().add(1, 'day').format('YYYY-MM-DD')
+
+                const query: HogQLQuery = {
+                    kind: NodeKind.HogQLQuery,
+                    query: hogql`
+                        SELECT
+                            (SELECT COUNT(DISTINCT person_id)
+                                FROM events
+                                WHERE event = 'survey shown'
+                                    AND properties.$survey_id = ${props.id}
+                                    AND timestamp >= ${startDate}
+                                    AND timestamp <= ${endDate}),
+                            (SELECT COUNT(DISTINCT person_id)
+                                FROM events
+                                WHERE event = 'survey dismissed'
+                                    AND properties.$survey_id = ${props.id}
+                                    AND timestamp >= ${startDate}
+                                    AND timestamp <= ${endDate}),
+                            (SELECT COUNT(DISTINCT person_id)
+                                FROM events
+                                WHERE event = 'survey sent'
+                                    AND properties.$survey_id = ${props.id}
+                                    AND timestamp >= ${startDate}
+                                    AND timestamp <= ${endDate})
+                    `,
+                }
+                const responseJSON = await api.query(query)
+                const { results } = responseJSON
+                if (results && results[0]) {
+                    const [totalSeen, dismissed, sent] = results[0]
+                    const onlySeen = totalSeen - dismissed - sent
+                    return { seen: onlySeen < 0 ? 0 : onlySeen, dismissed, sent }
+                } else {
+                    return { seen: 0, dismissed: 0, sent: 0 }
+                }
             },
         },
     })),
@@ -152,6 +204,7 @@ export const surveyLogic = kea<surveyLogicType>([
         },
         loadSurveySuccess: ({ survey }) => {
             actions.setCurrentQuestionIndexAndType(0, survey.questions[0].type)
+            actions.loadSurveyUserStats()
         },
     })),
     reducers({
@@ -206,6 +259,12 @@ export const surveyLogic = kea<surveyLogicType>([
             { idx: 0, type: SurveyQuestionType.Open } as { idx: number; type: SurveyQuestionType },
             {
                 setCurrentQuestionIndexAndType: (_, { idx, type }) => ({ idx, type }),
+            },
+        ],
+        writingHTMLDescription: [
+            false,
+            {
+                setWritingHTMLDescription: (_, { writingHTML }) => writingHTML,
             },
         ],
     }),
@@ -459,7 +518,23 @@ export const surveyLogic = kea<surveyLogicType>([
             await actions.loadSurvey()
         }
         if (props.id === 'new') {
-            actions.resetSurvey()
+            await actions.resetSurvey()
         }
     }),
 ])
+
+function sanitizeQuestions(surveyPayload: Partial<Survey>): Partial<Survey> {
+    if (!surveyPayload.questions) {
+        return surveyPayload
+    }
+    return {
+        ...surveyPayload,
+        questions: surveyPayload.questions?.map((rawQuestion) => {
+            return {
+                ...rawQuestion,
+                description: sanitize(rawQuestion.description || ''),
+                question: sanitize(rawQuestion.question || ''),
+            }
+        }),
+    }
+}
