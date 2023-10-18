@@ -42,7 +42,7 @@ describe('Surveys', () => {
     it('shows survey disabled banner when surveys disabled', () => {
         cy.get('div.LemonBanner.LemonBanner--warning.mb-2').should(
             'contain',
-            'Survey popups are currently disabled for this project'
+            'Survey popovers are currently disabled for this project'
         )
         cy.get('div.LemonBanner.LemonBanner--warning.mb-2').contains('Configure').click()
 
@@ -66,7 +66,7 @@ describe('Surveys', () => {
         // now lemon banner should be back
         cy.get('div.LemonBanner.LemonBanner--warning.mb-2').should(
             'contain',
-            'Survey popups are currently disabled for this project'
+            'Survey popovers are currently disabled for this project'
         )
     })
 
@@ -92,7 +92,7 @@ describe('Surveys', () => {
 
         cy.get('[id="scenes.surveys.surveyLogic.new.survey.questions.0.scale"]')
             .invoke('html')
-            .should('include', '1 - 10')
+            .should('include', '0 - 10')
 
         cy.get('[id="scenes.surveys.surveyLogic.new.survey.questions.0.upperBoundLabel"]').should(
             'have.value',

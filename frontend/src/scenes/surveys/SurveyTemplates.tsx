@@ -1,6 +1,6 @@
 import { SceneExport } from 'scenes/sceneTypes'
 import { SurveyAppearance } from './SurveyAppearance'
-import { defaultSurveyTemplates } from './constants'
+import { defaultSurveyTemplates, defaultSurveyAppearance } from './constants'
 import { SurveyQuestion } from '~/types'
 import './SurveyTemplates.scss'
 import { useActions } from 'kea'
@@ -36,14 +36,18 @@ export function SurveyTemplates(): JSX.Element {
                             data-attr="survey-template"
                             key={idx}
                             onClick={() => {
-                                setSurveyTemplateValues({ name: template.type, questions: template.questions })
+                                setSurveyTemplateValues({
+                                    name: template.type,
+                                    questions: template.questions,
+                                    appearance: { ...defaultSurveyAppearance, ...template.appearance },
+                                })
                                 reportSurveyTemplateClicked(template.type)
                             }}
                         >
-                            <span className="mb-2 text-md">
+                            <span className="text-md">
                                 <b>{template.type}</b>
                             </span>
-                            <span className="flex flex-wrap text-xs text-muted max-w-80 font-medium mb-2">
+                            <span className="flex flex-wrap text-xs text-muted max-w-80 font-medium mb-3">
                                 {template.description}
                             </span>
                             <div className="SurveyTemplateContainer">
@@ -52,7 +56,11 @@ export function SurveyTemplates(): JSX.Element {
                                         key={idx}
                                         type={template.questions[0].type}
                                         question={template.questions[0].question}
-                                        appearance={{ whiteLabel: true, ...template.appearance }}
+                                        appearance={{
+                                            ...defaultSurveyAppearance,
+                                            whiteLabel: true,
+                                            ...template.appearance,
+                                        }}
                                         surveyQuestionItem={template.questions[0] as SurveyQuestion}
                                     />
                                 </div>

@@ -32,6 +32,13 @@ import {
 } from './constants'
 import { sanitize } from 'dompurify'
 
+export enum SurveyEditSection {
+    Steps = 'steps',
+    Presentation = 'presentation',
+    Appearance = 'appearance',
+    Customization = 'customization',
+    Targeting = 'targeting',
+}
 export interface SurveyLogicProps {
     id: string | 'new'
 }
@@ -66,6 +73,12 @@ export interface SurveyMultipleChoiceResults {
     [key: number]: {
         labels: string[]
         data: number[]
+    }
+}
+
+export interface SurveyOpenTextResults {
+    [key: number]: {
+        events: { properties: Record<string, any>; distinct_id: string }[]
     }
 }
 
@@ -114,6 +127,8 @@ export const surveyLogic = kea<surveyLogicType>([
         setCurrentQuestionIndexAndType: (idx: number, type: SurveyQuestionType) => ({ idx, type }),
         setWritingHTMLDescription: (writingHTML: boolean) => ({ writingHTML }),
         setSurveyTemplateValues: (template: any) => ({ template }),
+        setSelectedQuestion: (idx: number | null) => ({ idx }),
+        setSelectedSection: (section: SurveyEditSection | null) => ({ section }),
         resetTargeting: true,
     }),
     loaders(({ props, actions, values }) => ({
@@ -219,7 +234,7 @@ export const surveyLogic = kea<surveyLogicType>([
                 const query: HogQLQuery = {
                     kind: NodeKind.HogQLQuery,
                     query: `
-                        SELECT properties.${surveyResponseField} AS survey_response, COUNT(survey_response)
+                        SELECT JSONExtractString(properties, '${surveyResponseField}') AS survey_response, COUNT(survey_response)
                         FROM events
                         WHERE event = 'survey sent' 
                             AND properties.$survey_id = '${props.id}'
@@ -232,7 +247,8 @@ export const surveyLogic = kea<surveyLogicType>([
                 const { results } = responseJSON
 
                 let total = 0
-                const data = new Array(question.scale).fill(0)
+                const dataSize = question.scale === 10 ? 11 : question.scale
+                const data = new Array(dataSize).fill(0)
                 results?.forEach(([value, count]) => {
                     total += count
                     data[value - 1] = count
@@ -259,7 +275,7 @@ export const surveyLogic = kea<surveyLogicType>([
                 const query: HogQLQuery = {
                     kind: NodeKind.HogQLQuery,
                     query: `
-                        SELECT properties.${surveyResponseField} AS survey_response, COUNT(survey_response)
+                        SELECT JSONExtractString(properties, '${surveyResponseField}') AS survey_response, COUNT(survey_response)
                         FROM events
                         WHERE event = 'survey sent' 
                             AND properties.$survey_id = '${props.id}'
@@ -296,10 +312,13 @@ export const surveyLogic = kea<surveyLogicType>([
                     ? dayjs(survey.end_date).add(1, 'day').format('YYYY-MM-DD')
                     : dayjs().add(1, 'day').format('YYYY-MM-DD')
 
+                const surveyResponseField =
+                    questionIndex === 0 ? '$survey_response' : `$survey_response_${questionIndex}`
+
                 const query: HogQLQuery = {
                     kind: NodeKind.HogQLQuery,
                     query: `
-                        SELECT count(), arrayJoin(JSONExtractArrayRaw(properties, '$survey_response')) AS choice
+                        SELECT count(), arrayJoin(JSONExtractArrayRaw(properties, '${surveyResponseField}')) AS choice
                         FROM events
                         WHERE event == 'survey sent'
                             AND properties.$survey_id == '${survey.id}'
@@ -328,6 +347,45 @@ export const surveyLogic = kea<surveyLogicType>([
                 const labels = results?.map((r) => r[1])
 
                 return { ...values.surveyRatingResults, [questionIndex]: { labels, data } }
+            },
+        },
+        surveyOpenTextResults: {
+            loadSurveyOpenTextResults: async ({
+                questionIndex,
+            }: {
+                questionIndex: number
+            }): Promise<SurveyOpenTextResults> => {
+                const { survey } = values
+
+                const question = values.survey.questions[questionIndex]
+                if (question.type !== SurveyQuestionType.Open) {
+                    throw new Error(`Survey question type must be ${SurveyQuestionType.Open}`)
+                }
+
+                const startDate = dayjs((survey as Survey).created_at).format('YYYY-MM-DD')
+                const endDate = survey.end_date
+                    ? dayjs(survey.end_date).add(1, 'day').format('YYYY-MM-DD')
+                    : dayjs().add(1, 'day').format('YYYY-MM-DD')
+
+                const query: HogQLQuery = {
+                    kind: NodeKind.HogQLQuery,
+                    query: `
+                        SELECT properties, distinct_id
+                        FROM events
+                        WHERE event == 'survey sent'
+                            AND properties.$survey_id == '${survey.id}'
+                            AND timestamp >= '${startDate}'
+                            AND timestamp <= '${endDate}'
+                        LIMIT 20
+                    `,
+                }
+
+                const responseJSON = await api.query(query)
+                const { results } = responseJSON
+
+                const events = results?.map((r) => ({ properties: JSON.parse(r[0]), distinct_id: r[1] }))
+
+                return { ...values.surveyRatingResults, [questionIndex]: { events } }
             },
         },
     })),
@@ -425,6 +483,19 @@ export const surveyLogic = kea<surveyLogicType>([
                 },
             },
         ],
+        selectedQuestion: [
+            0 as number | null,
+            {
+                setSelectedQuestion: (_, { idx }) => idx,
+            },
+        ],
+        selectedSection: [
+            SurveyEditSection.Steps as SurveyEditSection | null,
+            {
+                setSelectedSection: (_, { section }) => section,
+            },
+        ],
+        // TODO: remove this currentQuestionIndexAndType once surveys visualisation flag is rolled out
         currentQuestionIndexAndType: [
             { idx: 0, type: SurveyQuestionType.Open } as { idx: number; type: SurveyQuestionType },
             {
@@ -457,6 +528,17 @@ export const surveyLogic = kea<surveyLogicType>([
             {},
             {
                 loadSurveyMultipleChoiceResultsSuccess: (state, { payload }) => {
+                    if (!payload || !payload.hasOwnProperty('questionIndex')) {
+                        return { ...state }
+                    }
+                    return { ...state, [payload.questionIndex]: true }
+                },
+            },
+        ],
+        surveyOpenTextResultsReady: [
+            {},
+            {
+                loadSurveyOpenTextResultsSuccess: (state, { payload }) => {
                     if (!payload || !payload.hasOwnProperty('questionIndex')) {
                         return { ...state }
                     }
@@ -730,6 +812,10 @@ function sanitizeQuestions(surveyPayload: Partial<Survey>): Partial<Survey> {
     if (!surveyPayload.questions) {
         return surveyPayload
     }
+
+    const sanitizedThankYouHeader = sanitize(surveyPayload.appearance?.thankYouMessageHeader || '')
+    const sanitizedThankYouDescription = sanitize(surveyPayload.appearance?.thankYouMessageDescription || '')
+
     return {
         ...surveyPayload,
         questions: surveyPayload.questions?.map((rawQuestion) => {
@@ -739,5 +825,10 @@ function sanitizeQuestions(surveyPayload: Partial<Survey>): Partial<Survey> {
                 question: sanitize(rawQuestion.question || ''),
             }
         }),
+        appearance: {
+            ...surveyPayload.appearance,
+            ...(sanitizedThankYouHeader && { thankYouMessageHeader: sanitizedThankYouHeader }),
+            ...(sanitizedThankYouDescription && { thankYouMessageDescription: sanitizedThankYouDescription }),
+        },
     }
 }

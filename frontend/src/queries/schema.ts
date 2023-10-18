@@ -1,27 +1,28 @@
 import {
     AnyPropertyFilter,
+    BaseMathType,
     Breakdown,
     BreakdownKeyType,
     BreakdownType,
-    PropertyGroupFilter,
-    EventType,
-    IntervalType,
-    BaseMathType,
-    PropertyMathType,
     CountPerActorMathType,
-    GroupMathType,
+    EventPropertyFilter,
+    EventType,
     FilterType,
-    TrendsFilterType,
     FunnelsFilterType,
-    RetentionFilterType,
-    PathsFilterType,
-    StickinessFilterType,
-    LifecycleFilterType,
-    LifecycleToggle,
+    GroupMathType,
     HogQLMathType,
+    HogQLPropertyFilter,
     InsightLogicProps,
     InsightShortId,
-    EventPropertyFilter,
+    IntervalType,
+    LifecycleFilterType,
+    LifecycleToggle,
+    PathsFilterType,
+    PropertyGroupFilter,
+    PropertyMathType,
+    RetentionFilterType,
+    StickinessFilterType,
+    TrendsFilterType,
 } from '~/types'
 import { ComponentType } from 'react'
 
@@ -62,9 +63,8 @@ export enum NodeKind {
 
     // Web analytics queries
     WebOverviewStatsQuery = 'WebOverviewStatsQuery',
-    WebTopSourcesQuery = 'WebTopSourcesQuery',
-    WebTopPagesQuery = 'WebTopPagesQuery',
     WebTopClicksQuery = 'WebTopClicksQuery',
+    WebStatsTableQuery = 'WebStatsTableQuery',
 
     // Time to see data
     TimeToSeeDataSessionsQuery = 'TimeToSeeDataSessionsQuery',
@@ -86,9 +86,8 @@ export type AnyDataNode =
     | HogQLQuery
     | HogQLMetadata
     | WebOverviewStatsQuery
-    | WebTopSourcesQuery
+    | WebStatsTableQuery
     | WebTopClicksQuery
-    | WebTopPagesQuery
 
 export type QuerySchema =
     // Data nodes (see utils.ts)
@@ -134,6 +133,7 @@ export interface DataNode extends Node {
 export interface HogQLQueryModifiers {
     personsOnEventsMode?: 'disabled' | 'v1_enabled' | 'v2_enabled'
     personsArgMaxVersion?: 'auto' | 'v1' | 'v2'
+    inCohortVia?: 'leftjoin' | 'subquery'
 }
 
 export interface HogQLQueryResponse {
@@ -316,9 +316,8 @@ export interface DataTableNode extends Node, DataTableNodeViewProps {
         | HogQLQuery
         | TimeToSeeDataSessionsQuery
         | WebOverviewStatsQuery
-        | WebTopSourcesQuery
+        | WebStatsTableQuery
         | WebTopClicksQuery
-        | WebTopPagesQuery
 
     /** Columns shown in the table, unless the `source` provides them. */
     columns?: HogQLExpression[]
@@ -536,6 +535,7 @@ export interface PersonsQueryResponse {
 
 export interface PersonsQuery extends DataNode {
     kind: NodeKind.PersonsQuery
+    source?: LifecycleQuery | HogQLQuery
     select?: HogQLExpression[]
     search?: string
     properties?: AnyPropertyFilter[]
@@ -546,15 +546,15 @@ export interface PersonsQuery extends DataNode {
     response?: PersonsQueryResponse
 }
 
-export type WebAnalyticsPropertyFilters = EventPropertyFilter[]
+export type WebAnalyticsPropertyFilters = (EventPropertyFilter | HogQLPropertyFilter)[]
 
 export interface WebAnalyticsQueryBase {
-    dateRange?: DateRange
+    dateRange: DateRange
+    properties: WebAnalyticsPropertyFilters
 }
 
 export interface WebOverviewStatsQuery extends WebAnalyticsQueryBase {
     kind: NodeKind.WebOverviewStatsQuery
-    properties: WebAnalyticsPropertyFilters
     response?: WebOverviewStatsQueryResponse
 }
 
@@ -563,20 +563,9 @@ export interface WebOverviewStatsQueryResponse extends QueryResponse {
     types?: unknown[]
     columns?: unknown[]
 }
-export interface WebTopSourcesQuery extends WebAnalyticsQueryBase {
-    kind: NodeKind.WebTopSourcesQuery
-    properties: WebAnalyticsPropertyFilters
-    response?: WebTopSourcesQueryResponse
-}
-export interface WebTopSourcesQueryResponse extends QueryResponse {
-    results: unknown[]
-    types?: unknown[]
-    columns?: unknown[]
-}
 
 export interface WebTopClicksQuery extends WebAnalyticsQueryBase {
     kind: NodeKind.WebTopClicksQuery
-    properties: WebAnalyticsPropertyFilters
     response?: WebTopClicksQueryResponse
 }
 export interface WebTopClicksQueryResponse extends QueryResponse {
@@ -585,15 +574,27 @@ export interface WebTopClicksQueryResponse extends QueryResponse {
     columns?: unknown[]
 }
 
-export interface WebTopPagesQuery extends WebAnalyticsQueryBase {
-    kind: NodeKind.WebTopPagesQuery
-    properties: WebAnalyticsPropertyFilters
-    response?: WebTopPagesQueryResponse
+export enum WebStatsBreakdown {
+    Page = 'Page',
+    InitialPage = 'InitialPage',
+    // ExitPage = 'ExitPage'
+    InitialReferringDomain = 'InitialReferringDomain',
+    InitialUTMSource = 'InitialUTMSource',
+    InitialUTMCampaign = 'InitialUTMCampaign',
+    Browser = 'Browser',
+    OS = 'OS',
+    DeviceType = 'DeviceType',
 }
-export interface WebTopPagesQueryResponse extends QueryResponse {
+export interface WebStatsTableQuery extends WebAnalyticsQueryBase {
+    kind: NodeKind.WebStatsTableQuery
+    breakdownBy: WebStatsBreakdown
+    response?: WebStatsTableQueryResponse
+}
+export interface WebStatsTableQueryResponse extends QueryResponse {
     results: unknown[]
     types?: unknown[]
     columns?: unknown[]
+    hogql?: string
 }
 
 export type InsightQueryNode =
@@ -715,9 +716,20 @@ export interface QueryContext {
     emptyStateDetail?: string
 }
 
-export type QueryContextColumnComponent = ComponentType<{ record: any; columnName: string; value: any }>
+export type QueryContextColumnTitleComponent = ComponentType<{
+    columnName: string
+    query: DataTableNode
+}>
+
+export type QueryContextColumnComponent = ComponentType<{
+    columnName: string
+    query: DataTableNode
+    record: unknown
+    value: unknown
+}>
 
 interface QueryContextColumn {
     title?: string
+    renderTitle?: QueryContextColumnTitleComponent
     render?: QueryContextColumnComponent
 }
