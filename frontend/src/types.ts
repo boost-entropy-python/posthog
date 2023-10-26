@@ -935,6 +935,7 @@ export enum StepOrderValue {
 }
 
 export enum PersonsTabType {
+    FEED = 'feed',
     EVENTS = 'events',
     SESSION_RECORDINGS = 'sessionRecordings',
     PROPERTIES = 'properties',
@@ -3059,7 +3060,7 @@ export type NotebookListItemType = {
 }
 
 export type NotebookType = NotebookListItemType & {
-    content: JSONContent // TODO: Type this better
+    content: JSONContent | null
     version: number
     // used to power text-based search
     text_content?: string | null
@@ -3080,6 +3081,9 @@ export enum NotebookNodeType {
     Backlink = 'ph-backlink',
     ReplayTimestamp = 'ph-replay-timestamp',
     Image = 'ph-image',
+    PersonFeed = 'ph-person-feed',
+    Properties = 'ph-properties',
+    Map = 'ph-map',
 }
 
 export type NotebookNodeResource = {
