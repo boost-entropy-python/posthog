@@ -1,22 +1,37 @@
+import { IconAsterisk, IconDay, IconGear, IconNight, IconSearch } from '@posthog/icons'
 import { LemonBadge } from '@posthog/lemon-ui'
 import { useActions, useValues } from 'kea'
-import { IconGear, IconDay, IconNight, IconAsterisk, IconSearch } from '@posthog/icons'
+import { commandBarLogic } from 'lib/components/CommandBar/commandBarLogic'
+import { Resizer } from 'lib/components/Resizer/Resizer'
 import { Popover } from 'lib/lemon-ui/Popover'
 import { ProfilePicture } from 'lib/lemon-ui/ProfilePicture'
+import { featureFlagLogic } from 'lib/logic/featureFlagLogic'
+import { useRef } from 'react'
 import { Scene } from 'scenes/sceneTypes'
+import { urls } from 'scenes/urls'
 import { userLogic } from 'scenes/userLogic'
+
 import { navigationLogic } from '~/layout/navigation/navigationLogic'
 import { SitePopoverOverlay } from '~/layout/navigation/TopBar/SitePopover'
+
 import { navigation3000Logic } from '../navigationLogic'
 import { themeLogic } from '../themeLogic'
 import { NavbarButton } from './NavbarButton'
-import { urls } from 'scenes/urls'
-import { featureFlagLogic } from 'lib/logic/featureFlagLogic'
-import { Resizer } from 'lib/components/Resizer/Resizer'
-import { useRef } from 'react'
-import { commandBarLogic } from 'lib/components/CommandBar/commandBarLogic'
-import { KeyboardShortcut } from '~/layout/navigation-3000/components/KeyboardShortcut'
-import { useFeatureFlag } from 'lib/hooks/useFeatureFlag'
+
+export function ThemeIcon(): JSX.Element {
+    const { isDarkModeOn, isThemeSyncedWithSystem } = useValues(themeLogic)
+
+    const activeThemeIcon = isDarkModeOn ? <IconNight /> : <IconDay />
+
+    return isThemeSyncedWithSystem ? (
+        <div className="relative">
+            {activeThemeIcon}
+            <LemonBadge size="small" position="top-right" content={<IconAsterisk />} />
+        </div>
+    ) : (
+        activeThemeIcon
+    )
+}
 
 export function Navbar(): JSX.Element {
     const { user } = useValues(userLogic)
@@ -24,16 +39,12 @@ export function Navbar(): JSX.Element {
     const { closeSitePopover, toggleSitePopover } = useActions(navigationLogic)
     const { isSidebarShown, activeNavbarItemId, navbarItems } = useValues(navigation3000Logic)
     const { showSidebar, hideSidebar, toggleNavCollapsed } = useActions(navigation3000Logic)
-    const { isDarkModeOn, darkModeSavedPreference, darkModeSystemPreference, isThemeSyncedWithSystem } =
-        useValues(themeLogic)
+    const { darkModeSavedPreference, darkModeSystemPreference } = useValues(themeLogic)
     const { toggleTheme } = useActions(themeLogic)
     const { featureFlags } = useValues(featureFlagLogic)
     const { toggleSearchBar } = useActions(commandBarLogic)
 
-    const activeThemeIcon = isDarkModeOn ? <IconNight /> : <IconDay />
-
     const containerRef = useRef<HTMLDivElement | null>(null)
-    const isUsingNewNav = useFeatureFlag('POSTHOG_3000_NAV')
 
     return (
         <nav className="Navbar3000" ref={containerRef}>
@@ -75,27 +86,10 @@ export function Navbar(): JSX.Element {
                             icon={<IconSearch />}
                             title="Search"
                             onClick={toggleSearchBar}
-                            sideIcon={
-                                !isUsingNewNav ? (
-                                    <span className="text-xs">
-                                        <KeyboardShortcut shift k />
-                                    </span>
-                                ) : (
-                                    <></>
-                                )
-                            }
+                            keyboardShortcut={{ command: true, k: true }}
                         />
                         <NavbarButton
-                            icon={
-                                isThemeSyncedWithSystem ? (
-                                    <div className="relative">
-                                        {activeThemeIcon}
-                                        <LemonBadge size="small" position="top-right" content={<IconAsterisk />} />
-                                    </div>
-                                ) : (
-                                    activeThemeIcon
-                                )
-                            }
+                            icon={<ThemeIcon />}
                             identifier="theme-button"
                             title={
                                 darkModeSavedPreference === false
