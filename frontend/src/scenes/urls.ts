@@ -100,6 +100,7 @@ export const urls = {
     personByUUID: (uuid: string, encode: boolean = true): string =>
         encode ? `/persons/${encodeURIComponent(uuid)}` : `/persons/${uuid}`,
     persons: (): string => '/persons',
+    // TODO: Default to the landing page, once it's ready
     pipeline: (tab?: PipelineTabs): string => `/pipeline/${tab ? tab : PipelineTabs.Destinations}`,
     pipelineApp: (id: string | number, tab?: PipelineAppTabs): string =>
         `/pipeline/${id}/${tab ? tab : PipelineAppTabs.Configuration}`,
@@ -123,10 +124,8 @@ export const urls = {
     surveyTemplates: (): string => '/survey_templates',
     dataWarehouse: (): string => '/data-warehouse',
     dataWarehouseTable: (): string => `/data-warehouse/new`,
-    dataWarehousePosthog: (): string => '/data-warehouse/posthog',
-    dataWarehouseExternal: (): string => '/data-warehouse/external',
-    dataWarehouseSavedQueries: (): string => '/data-warehouse/views',
     dataWarehouseSettings: (): string => '/data-warehouse/settings',
+    dataWarehouseRedirect: (kind: string): string => `/data-warehouse/${kind}/redirect`,
     annotations: (): string => '/data-management/annotations',
     annotation: (id: AnnotationType['id'] | ':id'): string => `/data-management/annotations/${id}`,
     projectApps: (tab?: PluginTab): string => `/project/apps${tab ? `?tab=${tab}` : ''}`,

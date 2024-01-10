@@ -1,4 +1,4 @@
-import { LemonBanner, LemonDivider, LemonTable, Tooltip } from '@posthog/lemon-ui'
+import { LemonBanner, LemonDivider, LemonMenu, LemonTable, Tooltip } from '@posthog/lemon-ui'
 import { Popconfirm } from 'antd'
 import { useActions, useValues } from 'kea'
 import { IconDelete, IconLock, IconLockOpen } from 'lib/lemon-ui/icons'
@@ -10,7 +10,9 @@ import { SceneExport } from 'scenes/sceneTypes'
 
 import { PluginInstallationType, PluginType } from '~/types'
 
+import { AppCode } from './AppCode'
 import { appsManagementLogic } from './appsManagementLogic'
+import { SourcePluginKind } from './sourceAppInitialCode'
 import { RenderApp } from './utils'
 
 export const scene: SceneExport = {
@@ -74,8 +76,6 @@ type RenderAppsTable = {
 function AppsTable({ plugins }: RenderAppsTable): JSX.Element {
     const { unusedPlugins } = useValues(appsManagementLogic)
     const { uninstallPlugin, patchPlugin } = useActions(appsManagementLogic)
-
-    // TODO: row expansion to show the source code and allow updating source apps
 
     const data = plugins.map((plugin) => ({ ...plugin, key: plugin.id }))
     return (
@@ -193,6 +193,12 @@ function AppsTable({ plugins }: RenderAppsTable): JSX.Element {
                         },
                     },
                 ]}
+                expandable={{
+                    // TODO: how to handle expanding multiple rows?
+                    expandedRowRender: function Render(plugin: PluginType) {
+                        return <AppCode pluginId={plugin.id} pluginType={plugin.plugin_type} />
+                    },
+                }}
             />
         </>
     )
@@ -358,8 +364,15 @@ function InstallLocalApp(): JSX.Element {
 }
 
 function InstallSourceApp(): JSX.Element {
-    const { sourcePluginName } = useValues(appsManagementLogic)
-    const { setSourcePluginName, installPlugin } = useActions(appsManagementLogic)
+    const { sourcePluginName, sourcePluginKind } = useValues(appsManagementLogic)
+    const { setSourcePluginName, installPlugin, setSourcePluginKind } = useActions(appsManagementLogic)
+
+    const menuItems = Object.values(SourcePluginKind).map((kind) => ({
+        label: kind,
+        onClick: () => {
+            setSourcePluginKind(kind)
+        },
+    }))
 
     return (
         <div>
@@ -378,6 +391,9 @@ function InstallSourceApp(): JSX.Element {
                     placeholder="Hello World App"
                     className="flex-1"
                 />
+                <LemonMenu items={menuItems} placement="bottom-end">
+                    <LemonButton size="small">{sourcePluginKind}</LemonButton>
+                </LemonMenu>
                 <LemonButton
                     disabledReason={!sourcePluginName ? 'Please enter a name' : undefined}
                     type="primary"
