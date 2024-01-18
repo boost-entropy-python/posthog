@@ -542,6 +542,7 @@ export enum PipelineAppTab {
     Configuration = 'configuration',
     Logs = 'logs',
     Metrics = 'metrics',
+    History = 'history',
 }
 
 export enum ProgressStatus {
@@ -1099,6 +1100,7 @@ export interface SessionRecordingType {
     console_error_count?: number
     /** Where this recording information was loaded from  */
     storage?: 'object_storage_lts' | 'object_storage'
+    summary?: string
 }
 
 export interface SessionRecordingPropertiesType {
@@ -1443,6 +1445,8 @@ export interface DashboardBasicType {
 
 export interface DashboardTemplateListParams {
     scope?: DashboardTemplateScope
+    // matches on template name, description, and tags
+    search?: string
 }
 
 export type DashboardTemplateScope = 'team' | 'global' | 'feature_flag'
