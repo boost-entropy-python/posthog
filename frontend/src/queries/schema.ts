@@ -574,7 +574,16 @@ export interface FunnelsQuery extends InsightsQueryBase {
 }
 
 /** `RetentionFilterType` minus everything inherited from `FilterType` */
-export type RetentionFilter = Omit<RetentionFilterType, keyof FilterType>
+export type RetentionFilterLegacy = Omit<RetentionFilterType, keyof FilterType>
+
+export type RetentionFilter = {
+    retentionType?: RetentionFilterLegacy['retention_type']
+    retentionReference?: RetentionFilterLegacy['retention_reference']
+    totalIntervals?: RetentionFilterLegacy['total_intervals']
+    returningEntity?: RetentionFilterLegacy['returning_entity']
+    targetEntity?: RetentionFilterLegacy['target_entity']
+    period?: RetentionFilterLegacy['period']
+}
 
 export interface RetentionValue {
     /** @asType integer */
@@ -598,15 +607,37 @@ export interface RetentionQuery extends InsightsQueryBase {
     retentionFilter: RetentionFilter
 }
 
+export interface PathsQueryResponse extends QueryResponse {
+    results: Record<string, any>[]
+}
 /** `PathsFilterType` minus everything inherited from `FilterType` and persons modal related params */
-export type PathsFilter = Omit<
+export type PathsFilterLegacy = Omit<
     PathsFilterType,
     keyof FilterType | 'path_start_key' | 'path_end_key' | 'path_dropoff_key'
 >
+
+export type PathsFilter = {
+    edgeLimit?: PathsFilterLegacy['edge_limit']
+    pathsHogQLExpression?: PathsFilterLegacy['paths_hogql_expression']
+    includeEventTypes?: PathsFilterLegacy['include_event_types']
+    startPoint?: PathsFilterLegacy['start_point']
+    endPoint?: PathsFilterLegacy['end_point']
+    pathGroupings?: PathsFilterLegacy['path_groupings']
+    excludeEvents?: PathsFilterLegacy['exclude_events']
+    stepLimit?: PathsFilterLegacy['step_limit']
+    pathReplacements?: PathsFilterLegacy['path_replacements']
+    localPathCleaningFilters?: PathsFilterLegacy['local_path_cleaning_filters']
+    minEdgeWeight?: PathsFilterLegacy['min_edge_weight']
+    maxEdgeWeight?: PathsFilterLegacy['max_edge_weight']
+    funnelPaths?: PathsFilterLegacy['funnel_paths']
+    funnelFilter?: PathsFilterLegacy['funnel_filter']
+}
+
 export interface PathsQuery extends InsightsQueryBase {
     kind: NodeKind.PathsQuery
+    response?: PathsQueryResponse
     /** Properties specific to the paths insight */
-    pathsFilter?: PathsFilter
+    pathsFilter: PathsFilter
 }
 
 /** `StickinessFilterType` minus everything inherited from `FilterType` and persons modal related params
@@ -785,6 +816,10 @@ export type WebAnalyticsPropertyFilters = WebAnalyticsPropertyFilter[]
 export interface WebAnalyticsQueryBase {
     dateRange?: DateRange
     properties: WebAnalyticsPropertyFilters
+    sampling?: {
+        enabled?: boolean
+        forceSamplingRate?: SamplingRate
+    }
 }
 
 export interface WebOverviewQuery extends WebAnalyticsQueryBase {
@@ -801,8 +836,14 @@ export interface WebOverviewItem {
     isIncreaseBad?: boolean
 }
 
+export interface SamplingRate {
+    numerator: number
+    denominator?: number
+}
+
 export interface WebOverviewQueryResponse extends QueryResponse {
     results: WebOverviewItem[]
+    samplingRate?: SamplingRate
 }
 
 export interface WebTopClicksQuery extends WebAnalyticsQueryBase {
@@ -813,6 +854,7 @@ export interface WebTopClicksQueryResponse extends QueryResponse {
     results: unknown[]
     types?: unknown[]
     columns?: unknown[]
+    samplingRate?: SamplingRate
 }
 
 export enum WebStatsBreakdown {
@@ -844,6 +886,7 @@ export interface WebStatsTableQueryResponse extends QueryResponse {
     types?: unknown[]
     columns?: unknown[]
     hogql?: string
+    samplingRate?: SamplingRate
 }
 
 export type InsightQueryNode =

@@ -929,7 +929,7 @@ class TestFilterToQuery(BaseTest):
         self.assertEqual(query.kind, "RetentionQuery")
 
     def test_base_paths_query(self):
-        filter = {"insight": "PATHS"}
+        filter = {"insight": "PATHS", "step_limit": 2}
 
         query = filter_to_query(filter)
 
@@ -1398,17 +1398,17 @@ class TestFilterToQuery(BaseTest):
         self.assertEqual(
             query.retentionFilter,
             RetentionFilter(
-                retention_type=RetentionType.retention_first_time,
-                total_intervals=12,
+                retentionType=RetentionType.retention_first_time,
+                totalIntervals=12,
                 period=RetentionPeriod.Week,
-                returning_entity={
+                returningEntity={
                     "id": "$pageview",
                     "name": "$pageview",
                     "type": "events",
                     "custom_name": None,
                     "order": None,
                 },
-                target_entity={
+                targetEntity={
                     "id": "$pageview",
                     "name": "$pageview",
                     "type": "events",
@@ -1458,22 +1458,22 @@ class TestFilterToQuery(BaseTest):
         self.assertEqual(
             query.pathsFilter,
             PathsFilter(
-                include_event_types=[PathType.field_pageview, PathType.hogql],
-                paths_hogql_expression="event",
-                start_point="http://localhost:8000/events",
-                end_point="http://localhost:8000/home",
-                edge_limit=50,
-                min_edge_weight=10,
-                max_edge_weight=20,
-                local_path_cleaning_filters=[
+                includeEventTypes=[PathType.field_pageview, PathType.hogql],
+                pathsHogQLExpression="event",
+                startPoint="http://localhost:8000/events",
+                endPoint="http://localhost:8000/home",
+                edgeLimit=50,
+                minEdgeWeight=10,
+                maxEdgeWeight=20,
+                localPathCleaningFilters=[
                     PathCleaningFilter(alias="merchant", regex="\\/merchant\\/\\d+\\/dashboard$")
                 ],
-                path_replacements=True,
-                exclude_events=["http://localhost:8000/events"],
-                step_limit=5,
-                path_groupings=["/merchant/*/payment"],
-                funnel_paths=FunnelPathType.funnel_path_between_steps,
-                funnel_filter={
+                pathReplacements=True,
+                excludeEvents=["http://localhost:8000/events"],
+                stepLimit=5,
+                pathGroupings=["/merchant/*/payment"],
+                funnelPaths=FunnelPathType.funnel_path_between_steps,
+                funnelFilter={
                     "insight": "FUNNELS",
                     "events": [
                         {

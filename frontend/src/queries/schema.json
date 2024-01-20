@@ -2193,10 +2193,70 @@
         },
         "PathsFilter": {
             "additionalProperties": false,
+            "properties": {
+                "edgeLimit": {
+                    "type": "integer"
+                },
+                "endPoint": {
+                    "type": "string"
+                },
+                "excludeEvents": {
+                    "items": {
+                        "type": "string"
+                    },
+                    "type": "array"
+                },
+                "funnelFilter": {
+                    "type": "object"
+                },
+                "funnelPaths": {
+                    "$ref": "#/definitions/FunnelPathType"
+                },
+                "includeEventTypes": {
+                    "items": {
+                        "$ref": "#/definitions/PathType"
+                    },
+                    "type": "array"
+                },
+                "localPathCleaningFilters": {
+                    "items": {
+                        "$ref": "#/definitions/PathCleaningFilter"
+                    },
+                    "type": "array"
+                },
+                "maxEdgeWeight": {
+                    "type": "integer"
+                },
+                "minEdgeWeight": {
+                    "type": "integer"
+                },
+                "pathGroupings": {
+                    "items": {
+                        "type": "string"
+                    },
+                    "type": "array"
+                },
+                "pathReplacements": {
+                    "type": "boolean"
+                },
+                "pathsHogQLExpression": {
+                    "type": "string"
+                },
+                "startPoint": {
+                    "type": "string"
+                },
+                "stepLimit": {
+                    "type": "integer"
+                }
+            },
+            "type": "object"
+        },
+        "PathsFilterLegacy": {
+            "additionalProperties": false,
             "description": "`PathsFilterType` minus everything inherited from `FilterType` and persons modal related params",
             "properties": {
                 "edge_limit": {
-                    "type": "number"
+                    "type": "integer"
                 },
                 "end_point": {
                     "type": "string"
@@ -2226,10 +2286,10 @@
                     "type": "array"
                 },
                 "max_edge_weight": {
-                    "type": "number"
+                    "type": "integer"
                 },
                 "min_edge_weight": {
-                    "type": "number"
+                    "type": "integer"
                 },
                 "path_groupings": {
                     "items": {
@@ -2250,7 +2310,7 @@
                     "type": "string"
                 },
                 "step_limit": {
-                    "type": "number"
+                    "type": "integer"
                 }
             },
             "type": "object"
@@ -2292,12 +2352,46 @@
                     ],
                     "description": "Property filters for all series"
                 },
+                "response": {
+                    "$ref": "#/definitions/PathsQueryResponse"
+                },
                 "samplingFactor": {
                     "description": "Sampling rate",
                     "type": ["number", "null"]
                 }
             },
-            "required": ["kind"],
+            "required": ["kind", "pathsFilter"],
+            "type": "object"
+        },
+        "PathsQueryResponse": {
+            "additionalProperties": false,
+            "properties": {
+                "hogql": {
+                    "type": "string"
+                },
+                "is_cached": {
+                    "type": "boolean"
+                },
+                "last_refresh": {
+                    "type": "string"
+                },
+                "next_allowed_client_refresh": {
+                    "type": "string"
+                },
+                "results": {
+                    "items": {
+                        "type": "object"
+                    },
+                    "type": "array"
+                },
+                "timings": {
+                    "items": {
+                        "$ref": "#/definitions/QueryTiming"
+                    },
+                    "type": "array"
+                }
+            },
+            "required": ["results"],
             "type": "object"
         },
         "PersonPropertyFilter": {
@@ -2782,6 +2876,9 @@
                             },
                             "type": "array"
                         },
+                        "samplingRate": {
+                            "$ref": "#/definitions/SamplingRate"
+                        },
                         "timings": {
                             "items": {
                                 "$ref": "#/definitions/QueryTiming"
@@ -2814,6 +2911,9 @@
                         "results": {
                             "items": {},
                             "type": "array"
+                        },
+                        "samplingRate": {
+                            "$ref": "#/definitions/SamplingRate"
                         },
                         "timings": {
                             "items": {
@@ -2851,6 +2951,9 @@
                         "results": {
                             "items": {},
                             "type": "array"
+                        },
+                        "samplingRate": {
+                            "$ref": "#/definitions/SamplingRate"
                         },
                         "timings": {
                             "items": {
@@ -2915,6 +3018,37 @@
                         "results": {
                             "items": {
                                 "$ref": "#/definitions/RetentionResult"
+                            },
+                            "type": "array"
+                        },
+                        "timings": {
+                            "items": {
+                                "$ref": "#/definitions/QueryTiming"
+                            },
+                            "type": "array"
+                        }
+                    },
+                    "required": ["results"],
+                    "type": "object"
+                },
+                {
+                    "additionalProperties": false,
+                    "properties": {
+                        "hogql": {
+                            "type": "string"
+                        },
+                        "is_cached": {
+                            "type": "boolean"
+                        },
+                        "last_refresh": {
+                            "type": "string"
+                        },
+                        "next_allowed_client_refresh": {
+                            "type": "string"
+                        },
+                        "results": {
+                            "items": {
+                                "type": "object"
                             },
                             "type": "array"
                         },
@@ -3168,6 +3302,31 @@
         },
         "RetentionFilter": {
             "additionalProperties": false,
+            "properties": {
+                "period": {
+                    "$ref": "#/definitions/RetentionPeriod"
+                },
+                "retentionReference": {
+                    "enum": ["total", "previous"],
+                    "type": "string"
+                },
+                "retentionType": {
+                    "$ref": "#/definitions/RetentionType"
+                },
+                "returningEntity": {
+                    "$ref": "#/definitions/RetentionEntity"
+                },
+                "targetEntity": {
+                    "$ref": "#/definitions/RetentionEntity"
+                },
+                "totalIntervals": {
+                    "type": "integer"
+                }
+            },
+            "type": "object"
+        },
+        "RetentionFilterLegacy": {
+            "additionalProperties": false,
             "description": "`RetentionFilterType` minus everything inherited from `FilterType`",
             "properties": {
                 "period": {
@@ -3307,6 +3466,19 @@
                 }
             },
             "required": ["count"],
+            "type": "object"
+        },
+        "SamplingRate": {
+            "additionalProperties": false,
+            "properties": {
+                "denominator": {
+                    "type": "number"
+                },
+                "numerator": {
+                    "type": "number"
+                }
+            },
+            "required": ["numerator"],
             "type": "object"
         },
         "SavedInsightNode": {
@@ -4039,6 +4211,18 @@
                 },
                 "properties": {
                     "$ref": "#/definitions/WebAnalyticsPropertyFilters"
+                },
+                "sampling": {
+                    "additionalProperties": false,
+                    "properties": {
+                        "enabled": {
+                            "type": "boolean"
+                        },
+                        "forceSamplingRate": {
+                            "$ref": "#/definitions/SamplingRate"
+                        }
+                    },
+                    "type": "object"
                 }
             },
             "required": ["properties"],
@@ -4085,6 +4269,18 @@
                 },
                 "response": {
                     "$ref": "#/definitions/WebOverviewQueryResponse"
+                },
+                "sampling": {
+                    "additionalProperties": false,
+                    "properties": {
+                        "enabled": {
+                            "type": "boolean"
+                        },
+                        "forceSamplingRate": {
+                            "$ref": "#/definitions/SamplingRate"
+                        }
+                    },
+                    "type": "object"
                 }
             },
             "required": ["kind", "properties"],
@@ -4110,6 +4306,9 @@
                         "$ref": "#/definitions/WebOverviewItem"
                     },
                     "type": "array"
+                },
+                "samplingRate": {
+                    "$ref": "#/definitions/SamplingRate"
                 },
                 "timings": {
                     "items": {
@@ -4162,6 +4361,18 @@
                 },
                 "response": {
                     "$ref": "#/definitions/WebStatsTableQueryResponse"
+                },
+                "sampling": {
+                    "additionalProperties": false,
+                    "properties": {
+                        "enabled": {
+                            "type": "boolean"
+                        },
+                        "forceSamplingRate": {
+                            "$ref": "#/definitions/SamplingRate"
+                        }
+                    },
+                    "type": "object"
                 }
             },
             "required": ["breakdownBy", "kind", "properties"],
@@ -4189,6 +4400,9 @@
                 "results": {
                     "items": {},
                     "type": "array"
+                },
+                "samplingRate": {
+                    "$ref": "#/definitions/SamplingRate"
                 },
                 "timings": {
                     "items": {
@@ -4219,6 +4433,18 @@
                 },
                 "response": {
                     "$ref": "#/definitions/WebTopClicksQueryResponse"
+                },
+                "sampling": {
+                    "additionalProperties": false,
+                    "properties": {
+                        "enabled": {
+                            "type": "boolean"
+                        },
+                        "forceSamplingRate": {
+                            "$ref": "#/definitions/SamplingRate"
+                        }
+                    },
+                    "type": "object"
                 }
             },
             "required": ["kind", "properties"],
@@ -4246,6 +4472,9 @@
                 "results": {
                     "items": {},
                     "type": "array"
+                },
+                "samplingRate": {
+                    "$ref": "#/definitions/SamplingRate"
                 },
                 "timings": {
                     "items": {
