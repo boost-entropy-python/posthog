@@ -270,6 +270,9 @@ export interface PersonalAPIKeyType {
     last_used_at: string
     team_id: number
     user_id: string
+    scopes: string[]
+    scoped_organizations?: OrganizationType['id'][] | null
+    scoped_teams?: TeamType['id'][] | null
 }
 
 export interface OrganizationBasicType {
@@ -799,6 +802,7 @@ export interface SessionPlayerData {
     start?: Dayjs
     end?: Dayjs
     fullyLoaded: boolean
+    sessionRecordingId: SessionRecordingId
 }
 
 export enum SessionRecordingUsageType {
