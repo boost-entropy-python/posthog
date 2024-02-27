@@ -203,13 +203,42 @@ describe('ingester', () => {
         })
         await ingester.consume(event)
         expect(ingester.sessions[`1__${sessionId}`]).toBeDefined()
-        ingester.sessions[`1__${sessionId}`].buffer!.context.createdAt = 0
+        ingester.sessions[`1__${sessionId}`].buffer!.createdAt = 0
 
         await ingester.flushAllReadySessions()
 
         await waitForExpect(() => {
             expect(ingester.sessions[`1__${sessionId}`]).not.toBeDefined()
         }, 10000)
+    })
+
+    describe('batch event processing', () => {
+        it('should batch parse incoming events and batch them to reduce writes', async () => {
+            mockConsumer.assignments.mockImplementation(() => [createTP(1)])
+            await ingester.handleEachBatch([
+                createMessage('session_id_1', 1),
+                createMessage('session_id_1', 1),
+                createMessage('session_id_1', 1),
+                createMessage('session_id_2', 1),
+            ])
+
+            expect(ingester.sessions[`${team.id}__session_id_1`].buffer?.count).toBe(1)
+            expect(ingester.sessions[`${team.id}__session_id_2`].buffer?.count).toBe(1)
+
+            let fileContents = await fs.readFile(
+                path.join(ingester.sessions[`${team.id}__session_id_1`].context.dir, 'buffer.jsonl'),
+                'utf-8'
+            )
+
+            expect(JSON.parse(fileContents).data).toHaveLength(3)
+
+            fileContents = await fs.readFile(
+                path.join(ingester.sessions[`${team.id}__session_id_2`].context.dir, 'buffer.jsonl'),
+                'utf-8'
+            )
+
+            expect(JSON.parse(fileContents).data).toHaveLength(1)
+        })
     })
 
     describe('simulated rebalancing', () => {
@@ -228,7 +257,7 @@ describe('ingester', () => {
         const getSessions = (
             ingester: SessionRecordingIngesterV3
         ): (SessionManagerContext & SessionManagerBufferContext)[] =>
-            Object.values(ingester.sessions).map((x) => ({ ...x.context, ...x.buffer!.context }))
+            Object.values(ingester.sessions).map((x) => ({ ...x.context, ...x.buffer! }))
 
         /**
          * It is really hard to actually do rebalance tests against kafka, so we instead simulate the various methods and ensure the correct logic occurs
