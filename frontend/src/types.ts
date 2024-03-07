@@ -869,7 +869,7 @@ export interface RecordingDurationFilter extends BasePropertyFilter {
 
 export type DurationType = 'duration' | 'active_seconds' | 'inactive_seconds'
 
-export type FilterableLogLevel = 'log' | 'warn' | 'error'
+export type FilterableLogLevel = 'info' | 'warn' | 'error'
 export interface RecordingFilters {
     date_from?: string | null
     date_to?: string | null
@@ -2369,7 +2369,7 @@ export interface Survey {
     linked_flag_id: number | null
     linked_flag: FeatureFlagBasicType | null
     targeting_flag: FeatureFlagBasicType | null
-    targeting_flag_filters: Pick<FeatureFlagFilters, 'groups'> | undefined
+    targeting_flag_filters?: FeatureFlagFilters
     conditions: {
         url: string
         selector: string
