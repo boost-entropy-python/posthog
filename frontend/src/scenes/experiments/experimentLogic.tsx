@@ -80,6 +80,11 @@ export interface TabularSecondaryMetricResults {
     results?: SecondaryMetricResult[]
 }
 
+export interface ExperimentResultCalculationError {
+    detail: string
+    statusCode: number
+}
+
 export const experimentLogic = kea<experimentLogicType>([
     props({} as ExperimentLogicProps),
     key((props) => props.experimentId || 'new'),
@@ -127,7 +132,7 @@ export const experimentLogic = kea<experimentLogicType>([
         setExperimentExposureInsight: (filters?: Partial<FilterType>) => ({ filters }),
         removeExperimentGroup: (idx: number) => ({ idx }),
         setEditExperiment: (editing: boolean) => ({ editing }),
-        setExperimentResultCalculationError: (error: string) => ({ error }),
+        setExperimentResultCalculationError: (error: ExperimentResultCalculationError) => ({ error }),
         setFlagImplementationWarning: (warning: boolean) => ({ warning }),
         setExposureAndSampleSize: (exposure: number, sampleSize: number) => ({ exposure, sampleSize }),
         updateExperimentGoal: (filters: Partial<FilterType>) => ({ filters }),
@@ -241,7 +246,7 @@ export const experimentLogic = kea<experimentLogicType>([
             },
         ],
         experimentResultCalculationError: [
-            null as string | null,
+            null as ExperimentResultCalculationError | null,
             {
                 setExperimentResultCalculationError: (_, { error }) => error,
             },
@@ -630,7 +635,7 @@ export const experimentLogic = kea<experimentLogicType>([
                             last_refresh: response.last_refresh,
                         }
                     } catch (error: any) {
-                        actions.setExperimentResultCalculationError(error.detail)
+                        actions.setExperimentResultCalculationError({ detail: error.detail, statusCode: error.status })
                         return null
                     }
                 },
@@ -768,6 +773,7 @@ export const experimentLogic = kea<experimentLogicType>([
                 return experimentResults?.significant || false
             },
         ],
+        // TODO: remove with the old UI
         significanceBannerDetails: [
             (s) => [s.experimentResults],
             (experimentResults): string | ReactElement => {
@@ -801,6 +807,32 @@ export const experimentLogic = kea<experimentLogicType>([
                             .
                         </>
                     )
+                }
+
+                if (experimentResults?.significance_code === SignificanceCode.LowWinProbability) {
+                    return 'This is because the win probability of all test variants combined is less than 90%.'
+                }
+
+                if (experimentResults?.significance_code === SignificanceCode.NotEnoughExposure) {
+                    return 'This is because we need at least 100 people per variant to declare significance.'
+                }
+
+                return ''
+            },
+        ],
+        significanceDetails: [
+            (s) => [s.experimentResults],
+            (experimentResults): string => {
+                if (experimentResults?.significance_code === SignificanceCode.HighLoss) {
+                    return `This is because the expected loss in conversion is greater than 1% (current value is ${(
+                        (experimentResults?.expected_loss || 0) * 100
+                    )?.toFixed(2)}%).`
+                }
+
+                if (experimentResults?.significance_code === SignificanceCode.HighPValue) {
+                    return `This is because the p value is greater than 0.05 (current value is ${
+                        experimentResults?.p_value?.toFixed(3) || 1
+                    }).`
                 }
 
                 if (experimentResults?.significance_code === SignificanceCode.LowWinProbability) {
@@ -1101,6 +1133,44 @@ export const experimentLogic = kea<experimentLogicType>([
                     return b.conversionRate - a.conversionRate
                 })
             },
+        ],
+        recommendedSampleSize: [
+            (s) => [s.experiment],
+            (experiment: Experiment): number => experiment?.parameters?.recommended_sample_size || 100,
+        ],
+        funnelResultsPersonsTotal: [
+            (s) => [s.experimentResults, s.experimentInsightType],
+            (experimentResults: ExperimentResults['result'], experimentInsightType: InsightType): number => {
+                if (experimentInsightType !== InsightType.FUNNELS || !experimentResults?.insight) {
+                    return 0
+                }
+
+                let sum = 0
+                experimentResults.insight.forEach((variantResult) => {
+                    if (variantResult[0]?.count) {
+                        sum += variantResult[0].count
+                    }
+                })
+                return sum
+            },
+        ],
+        actualRunningTime: [
+            (s) => [s.experiment],
+            (experiment: Experiment): number => {
+                if (!experiment.start_date) {
+                    return 0
+                }
+
+                if (experiment.end_date) {
+                    return dayjs(experiment.end_date).diff(experiment.start_date, 'day')
+                }
+
+                return dayjs().diff(experiment.start_date, 'day')
+            },
+        ],
+        recommendedRunningTime: [
+            (s) => [s.experiment],
+            (experiment: Experiment): number => experiment?.parameters?.recommended_running_time || 1,
         ],
     }),
     forms(({ actions, values }) => ({
