@@ -12,7 +12,7 @@ export type ProxyRecord = {
     id: string
     domain: string
     status: 'waiting' | 'issuing' | 'valid' | 'erroring' | 'deleting'
-    cname_target: string
+    target_cname: string
 }
 
 export type FormState = 'collapsed' | 'active' | 'complete'
@@ -46,16 +46,19 @@ export const proxyLogic = kea<proxyLogicType>([
                 return response
             },
             deleteRecord: async (id: ProxyRecord['id']) => {
-                const response = await api.delete(
-                    `api/organizations/${values.currentOrganization?.id}/proxy_records/${id}`
-                )
-                return response
+                void api.delete(`api/organizations/${values.currentOrganization?.id}/proxy_records/${id}`)
+                const newRecords = [...values.proxyRecords].map((r) => ({
+                    ...r,
+                    status: r.id === id ? 'deleting' : r.status,
+                }))
+                return newRecords
             },
         },
     })),
     listeners(({ actions, values, cache }) => ({
         collapseForm: () => actions.loadRecords(),
         deleteRecordFailure: () => actions.loadRecords(),
+        createRecordSuccess: () => actions.loadRecords(),
         loadRecordsSuccess: () => {
             const shouldRefresh = values.proxyRecords.some((r) => ['waiting', 'issuing', 'deleting'].includes(r.status))
             if (shouldRefresh) {
