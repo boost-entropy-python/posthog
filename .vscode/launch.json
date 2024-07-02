@@ -6,7 +6,7 @@
     "configurations": [
         {
             "name": "Frontend",
-            "command": "npm start",
+            "command": "pnpm start",
             "request": "launch",
             "type": "node-terminal",
             "cwd": "${workspaceFolder}",
@@ -79,11 +79,17 @@
                 "include": ["posthog/**/*.py"]
             },
             "request": "launch",
-            "program": "${workspaceFolder}/env/bin/celery",
+            "program": "${workspaceFolder}/env/bin/watchmedo",
             "console": "integratedTerminal",
             "python": "${workspaceFolder}/env/bin/python",
             "cwd": "${workspaceFolder}",
             "args": [
+                "auto-restart",
+                "--directory=./",
+                "--pattern=*.py",
+                "--recursive",
+                "--",
+                "celery",
                 "-A",
                 "posthog",
                 "worker",
@@ -115,11 +121,23 @@
                 "include": ["posthog/**/*.py"]
             },
             "request": "launch",
-            "program": "${workspaceFolder}/env/bin/celery",
+            "program": "${workspaceFolder}/env/bin/watchmedo",
             "console": "integratedTerminal",
             "python": "${workspaceFolder}/env/bin/python",
             "cwd": "${workspaceFolder}",
-            "args": ["-A", "posthog", "beat", "-S", "redbeat.RedBeatScheduler"],
+            "args": [
+                "auto-restart",
+                "--directory=./",
+                "--pattern=*.py",
+                "--recursive",
+                "--",
+                "celery",
+                "-A",
+                "posthog",
+                "beat",
+                "-S",
+                "redbeat.RedBeatScheduler"
+            ],
             "envFile": "${workspaceFolder}/bin/celery-queues.env",
             "env": {
                 "SKIP_ASYNC_MIGRATIONS_SETUP": "0",
@@ -213,6 +231,22 @@
             "stopAll": true,
             "presentation": {
                 "order": 1,
+                "group": "compound"
+            }
+        },
+        {
+            "name": "PostHog (local billing)",
+            "configurations": [
+                "Backend (with local billing)",
+                "Celery Threaded Pool",
+                "Celery Redbeat Scheduler",
+                "Frontend",
+                "Plugin Server",
+                "Temporal Worker"
+            ],
+            "stopAll": true,
+            "presentation": {
+                "order": 2,
                 "group": "compound"
             }
         }
