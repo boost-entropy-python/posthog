@@ -46,6 +46,8 @@ def execute_bytecode(
     ops = 0
     stdout: list[str] = []
     colored_bytecode = color_bytecode(bytecode) if debug else []
+    if isinstance(timeout, int):
+        timeout = timedelta(seconds=timeout)
 
     def next_token():
         nonlocal ip
@@ -145,9 +147,11 @@ def execute_bytecode(
                 push_stack(pop_stack() not in pop_stack())
             case Operation.REGEX:
                 args = [pop_stack(), pop_stack()]
+                # TODO: swap this for re2, as used in HogQL/ClickHouse and in the NodeJS VM
                 push_stack(bool(re.search(re.compile(args[1]), args[0])))
             case Operation.NOT_REGEX:
                 args = [pop_stack(), pop_stack()]
+                # TODO: swap this for re2, as used in HogQL/ClickHouse and in the NodeJS VM
                 push_stack(not bool(re.search(re.compile(args[1]), args[0])))
             case Operation.IREGEX:
                 args = [pop_stack(), pop_stack()]
