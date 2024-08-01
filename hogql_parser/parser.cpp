@@ -2484,8 +2484,9 @@ class HogQLParseTreeConverter : public HogQLParserBaseVisitor {
     }
 
     auto tag_element_ctx = ctx->hogqlxTagElement();
+    auto column_expr_ctx = ctx->columnExpr();
     auto tag_attribute_ctx = ctx->hogqlxTagAttribute();
-    PyObject* attributes = PyList_New(tag_attribute_ctx.size() + (tag_element_ctx ? 1 : 0));
+    PyObject* attributes = PyList_New(tag_attribute_ctx.size() + (tag_element_ctx || column_expr_ctx ? 1 : 0));
     if (!attributes) throw PyInternalError();
     bool found_source = false;
     for (size_t i = 0; i < tag_attribute_ctx.size(); i++) {
@@ -2534,14 +2535,30 @@ class HogQLParseTreeConverter : public HogQLParserBaseVisitor {
         throw PyInternalError();
       }
       PyList_SET_ITEM(attributes, tag_attribute_ctx.size(), source_attribute);
+    } else if (column_expr_ctx) {
+      if (found_source) {
+        Py_DECREF(attributes);
+        throw SyntaxError("Nested HogQLX tags cannot have a source attribute");
+      }
+      PyObject* source_attribute = build_ast_node(
+          "HogQLXAttribute", "{s:s#,s:N}", "name", "source", 6, "value", visitAsPyObject(ctx->columnExpr())
+      );
+      if (!source_attribute) {
+        Py_DECREF(attributes);
+        throw PyInternalError();
+      }
+      PyList_SET_ITEM(attributes, tag_attribute_ctx.size(), source_attribute);
     }
 
     RETURN_NEW_AST_NODE("HogQLXTag", "{s:s#,s:N}", "kind", opening.data(), opening.size(), "attributes", attributes);
   }
 
   VISIT(Placeholder) {
-    string name = visitAsString(ctx->identifier());
-    RETURN_NEW_AST_NODE("Placeholder", "{s:s#}", "field", name.data(), name.size());
+    auto nested_identifier_ctx = ctx->nestedIdentifier();
+    vector<string> nested =
+        nested_identifier_ctx ? any_cast<vector<string>>(visit(nested_identifier_ctx)) : vector<string>();
+
+    RETURN_NEW_AST_NODE("Placeholder", "{s:N}", "chain", X_PyList_FromStrings(nested));
   }
 
   VISIT_UNSUPPORTED(EnumValue)

@@ -1929,6 +1929,9 @@ public:
     std::vector<HogqlxTagAttributeContext *> hogqlxTagAttribute();
     HogqlxTagAttributeContext* hogqlxTagAttribute(size_t i);
     HogqlxTagElementContext *hogqlxTagElement();
+    antlr4::tree::TerminalNode *LBRACE();
+    ColumnExprContext *columnExpr();
+    antlr4::tree::TerminalNode *RBRACE();
 
     virtual std::any accept(antlr4::tree::ParseTreeVisitor *visitor) override;
   };
@@ -2408,7 +2411,7 @@ public:
     PlaceholderContext(antlr4::ParserRuleContext *parent, size_t invokingState);
     virtual size_t getRuleIndex() const override;
     antlr4::tree::TerminalNode *LBRACE();
-    IdentifierContext *identifier();
+    NestedIdentifierContext *nestedIdentifier();
     antlr4::tree::TerminalNode *RBRACE();
 
 

@@ -1102,6 +1102,12 @@ class HogQLParseTreeConverter(ParseTreeVisitor):
                 if a.name == "source":
                     raise SyntaxError(f"Nested HogQLX tags cannot have a source attribute")
             attributes.append(ast.HogQLXAttribute(name="source", value=source))
+        if ctx.columnExpr():
+            source = self.visit(ctx.columnExpr())
+            for a in attributes:
+                if a.name == "source":
+                    raise SyntaxError(f"Nested HogQLX tags cannot have a source attribute")
+            attributes.append(ast.HogQLXAttribute(name="source", value=source))
         return ast.HogQLXTag(kind=opening, attributes=attributes)
 
     def visitHogqlxTagAttribute(self, ctx: HogQLParser.HogqlxTagAttributeContext):
@@ -1114,8 +1120,8 @@ class HogQLParseTreeConverter(ParseTreeVisitor):
             return ast.HogQLXAttribute(name=name, value=ast.Constant(value=True))
 
     def visitPlaceholder(self, ctx: HogQLParser.PlaceholderContext):
-        name = self.visit(ctx.identifier())
-        return ast.Placeholder(field=name)
+        nested = self.visit(ctx.nestedIdentifier()) if ctx.nestedIdentifier() else []
+        return ast.Placeholder(chain=nested)
 
     def visitColumnExprTemplateString(self, ctx: HogQLParser.ColumnExprTemplateStringContext):
         return self.visit(ctx.templateString())

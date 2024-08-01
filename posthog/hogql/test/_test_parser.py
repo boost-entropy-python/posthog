@@ -643,7 +643,7 @@ def parser_test_factory(backend: Literal["python", "cpp"]):
         def test_placeholders(self):
             self.assertEqual(
                 self._expr("{foo}"),
-                ast.Placeholder(field="foo"),
+                ast.Placeholder(chain=["foo"]),
             )
             self.assertEqual(
                 self._expr("{foo}", {"foo": ast.Constant(value="bar")}),
@@ -854,7 +854,7 @@ def parser_test_factory(backend: Literal["python", "cpp"]):
                 self._select("select 1 from {placeholder}"),
                 ast.SelectQuery(
                     select=[ast.Constant(value=1)],
-                    select_from=ast.JoinExpr(table=ast.Placeholder(field="placeholder")),
+                    select_from=ast.JoinExpr(table=ast.Placeholder(chain=["placeholder"])),
                 ),
             )
             self.assertEqual(
@@ -1244,7 +1244,7 @@ def parser_test_factory(backend: Literal["python", "cpp"]):
                     where=ast.CompareOperation(
                         op=ast.CompareOperationOp.Eq,
                         left=ast.Constant(value=1),
-                        right=ast.Placeholder(field="hogql_val_1"),
+                        right=ast.Placeholder(chain=["hogql_val_1"]),
                     ),
                 ),
             )
@@ -1701,6 +1701,19 @@ def parser_test_factory(backend: Literal["python", "cpp"]):
                             ],
                         ),
                     ),
+                ],
+            )
+
+        def test_visit_hogqlx_tag_column_source(self):
+            query = """
+                select <a href='https://google.com'>{event}</a> from events
+            """
+            node = self._select(query)
+            assert isinstance(node, ast.SelectQuery) and cast(ast.HogQLXTag, node.select[0]) == ast.HogQLXTag(
+                kind="a",
+                attributes=[
+                    ast.HogQLXAttribute(name="href", value=Constant(value="https://google.com")),
+                    ast.HogQLXAttribute(name="source", value=ast.Field(chain=["event"])),
                 ],
             )
 

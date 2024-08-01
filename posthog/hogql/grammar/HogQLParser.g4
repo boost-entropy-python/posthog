@@ -221,7 +221,7 @@ columnLambdaExpr:
 
 hogqlxTagElement
     : LT identifier hogqlxTagAttribute* SLASH GT                                        # HogqlxTagElementClosed
-    | LT identifier hogqlxTagAttribute* GT hogqlxTagElement? LT SLASH identifier GT     # HogqlxTagElementNested
+    | LT identifier hogqlxTagAttribute* GT (hogqlxTagElement | (LBRACE columnExpr RBRACE))? LT SLASH identifier GT     # HogqlxTagElementNested
     ;
 hogqlxTagAttribute
     :   identifier '=' string
@@ -293,7 +293,7 @@ keywordForAlias
 alias: IDENTIFIER | keywordForAlias;  // |interval| can't be an alias, otherwise 'INTERVAL 1 SOMETHING' becomes ambiguous.
 identifier: IDENTIFIER | interval | keyword;
 enumValue: string EQ_SINGLE numberLiteral;
-placeholder: LBRACE identifier RBRACE;
+placeholder: LBRACE nestedIdentifier RBRACE;
 
 string: STRING_LITERAL | templateString;
 templateString : QUOTE_SINGLE_TEMPLATE stringContents* QUOTE_SINGLE ;
