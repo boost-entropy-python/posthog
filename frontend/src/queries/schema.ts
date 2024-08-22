@@ -204,6 +204,7 @@ export interface HogQLQueryModifiers {
     personsJoinMode?: 'inner' | 'left'
     bounceRatePageViewMode?: 'count_pageviews' | 'uniq_urls'
     sessionTableVersion?: 'auto' | 'v1' | 'v2'
+    propertyGroupsMode?: 'enabled' | 'disabled'
 }
 
 export interface DataWarehouseEventsModifier {
@@ -672,9 +673,9 @@ export interface VizSpecificOptions {
     }
 }
 
-export interface InsightVizNode extends Node<never>, InsightVizNodeViewProps {
+export interface InsightVizNode<T = InsightQueryNode> extends Node<never>, InsightVizNodeViewProps {
     kind: NodeKind.InsightVizNode
-    source: InsightQueryNode
+    source: T
 }
 
 interface InsightVizNodeViewProps {
@@ -763,7 +764,10 @@ export const TRENDS_FILTER_PROPERTIES = new Set<keyof TrendsFilter>([
     'hiddenLegendIndexes',
 ])
 
-export interface TrendsQueryResponse extends AnalyticsQueryResponseBase<Record<string, any>[]> {}
+export interface TrendsQueryResponse extends AnalyticsQueryResponseBase<Record<string, any>[]> {
+    /** Wether more breakdown values are available. */
+    hasMore?: boolean
+}
 
 export type CachedTrendsQueryResponse = CachedQueryResponse<TrendsQueryResponse>
 
@@ -1321,7 +1325,7 @@ export type CachedSessionAttributionExplorerQueryResponse = CachedQueryResponse<
 
 export interface ErrorTrackingQuery extends DataNode<ErrorTrackingQueryResponse> {
     kind: NodeKind.ErrorTrackingQuery
-    fingerprint?: string
+    fingerprint?: string[]
     select?: HogQLExpression[]
     eventColumns?: string[]
     order?: 'last_seen' | 'first_seen' | 'occurrences' | 'users' | 'sessions'
@@ -1333,9 +1337,9 @@ export interface ErrorTrackingQuery extends DataNode<ErrorTrackingQueryResponse>
 }
 
 export interface ErrorTrackingGroup {
-    fingerprint: string
+    fingerprint: string[]
     exception_type: string | null
-    merged_fingerprints: string[]
+    merged_fingerprints: string[][]
     occurrences: number
     sessions: number
     users: number
@@ -1679,4 +1683,13 @@ export interface DashboardFilter {
     date_from?: string | null
     date_to?: string | null
     properties?: AnyPropertyFilter[] | null
+}
+
+export interface AbsoluteThreshold {
+    lower?: number | null
+    upper?: number | null
+}
+
+export interface AnomalyCondition {
+    absoluteThreshold: AbsoluteThreshold
 }
