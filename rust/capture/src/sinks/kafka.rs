@@ -10,6 +10,7 @@ use rdkafka::util::Timeout;
 use rdkafka::ClientConfig;
 use tokio::task::JoinSet;
 use tracing::log::{debug, error, info};
+use tracing::{info_span, instrument, Instrument};
 
 use crate::api::{CaptureError, DataType, ProcessedEvent};
 use crate::config::KafkaConfig;
@@ -128,6 +129,14 @@ impl KafkaSink {
             .set("bootstrap.servers", &config.kafka_hosts)
             .set("statistics.interval.ms", "10000")
             .set("partitioner", "murmur2_random") // Compatibility with python-kafka
+            .set(
+                "metadata.max.age.ms",
+                config.kafka_metadata_max_age_ms.to_string(),
+            )
+            .set(
+                "message.send.max.retries",
+                config.kafka_producer_max_retries.to_string(),
+            )
             .set("linger.ms", config.kafka_producer_linger_ms.to_string())
             .set(
                 "message.max.bytes",
@@ -279,12 +288,16 @@ impl KafkaSink {
 
 #[async_trait]
 impl Event for KafkaSink {
+    #[instrument(skip_all)]
     async fn send(&self, event: ProcessedEvent) -> Result<(), CaptureError> {
         let ack = self.kafka_send(event).await?;
         histogram!("capture_event_batch_size").record(1.0);
-        Self::process_ack(ack).await
+        Self::process_ack(ack)
+            .instrument(info_span!("ack_wait_one"))
+            .await
     }
 
+    #[instrument(skip_all)]
     async fn send_batch(&self, events: Vec<ProcessedEvent>) -> Result<(), CaptureError> {
         let mut set = JoinSet::new();
         let batch_size = events.len();
@@ -314,6 +327,7 @@ impl Event for KafkaSink {
             }
             Ok(())
         }
+        .instrument(info_span!("ack_wait_many"))
         .await?;
 
         histogram!("capture_event_batch_size").record(batch_size as f64);
@@ -365,6 +379,8 @@ mod tests {
             kafka_heatmaps_topic: "events_plugin_ingestion".to_string(),
             kafka_tls: false,
             kafka_client_id: "".to_string(),
+            kafka_metadata_max_age_ms: 60000,
+            kafka_producer_max_retries: 2,
         };
         let sink = KafkaSink::new(config, handle, limiter).expect("failed to create sink");
         (cluster, sink)
