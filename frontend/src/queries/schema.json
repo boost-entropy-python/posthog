@@ -1235,6 +1235,9 @@
                     "description": "Generated HogQL query.",
                     "type": "string"
                 },
+                "isUdf": {
+                    "type": "boolean"
+                },
                 "is_cached": {
                     "type": "boolean"
                 },
@@ -3441,6 +3444,9 @@
                 "hogql_value": {
                     "type": "string"
                 },
+                "id": {
+                    "type": "string"
+                },
                 "name": {
                     "type": "string"
                 },
@@ -4938,6 +4944,9 @@
                 "layout": {
                     "$ref": "#/definitions/FunnelLayout",
                     "default": "vertical"
+                },
+                "useUdf": {
+                    "type": "boolean"
                 }
             },
             "type": "object"
@@ -5083,6 +5092,9 @@
                 "hogql": {
                     "description": "Generated HogQL query.",
                     "type": "string"
+                },
+                "isUdf": {
+                    "type": "boolean"
                 },
                 "modifiers": {
                     "$ref": "#/definitions/HogQLQueryModifiers",
@@ -8306,6 +8318,9 @@
                         "hogql": {
                             "description": "Generated HogQL query.",
                             "type": "string"
+                        },
+                        "isUdf": {
+                            "type": "boolean"
                         },
                         "modifiers": {
                             "$ref": "#/definitions/HogQLQueryModifiers",

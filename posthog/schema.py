@@ -1768,6 +1768,7 @@ class CachedFunnelsQueryResponse(BaseModel):
         description="Query error. Returned only if 'explain' or `modifiers.debug` is true. Throws an error otherwise.",
     )
     hogql: Optional[str] = Field(default=None, description="Generated HogQL query.")
+    isUdf: Optional[bool] = None
     is_cached: bool
     last_refresh: AwareDatetime
     modifiers: Optional[HogQLQueryModifiers] = Field(
@@ -2375,6 +2376,7 @@ class DatabaseSchemaField(BaseModel):
     chain: Optional[list[Union[str, int]]] = None
     fields: Optional[list[str]] = None
     hogql_value: str
+    id: Optional[str] = None
     name: str
     schema_valid: bool
     table: Optional[str] = None
@@ -2550,6 +2552,7 @@ class FunnelsQueryResponse(BaseModel):
         description="Query error. Returned only if 'explain' or `modifiers.debug` is true. Throws an error otherwise.",
     )
     hogql: Optional[str] = Field(default=None, description="Generated HogQL query.")
+    isUdf: Optional[bool] = None
     modifiers: Optional[HogQLQueryModifiers] = Field(
         default=None, description="Modifiers used when performing the query"
     )
@@ -3329,6 +3332,7 @@ class QueryResponseAlternative25(BaseModel):
         description="Query error. Returned only if 'explain' or `modifiers.debug` is true. Throws an error otherwise.",
     )
     hogql: Optional[str] = Field(default=None, description="Generated HogQL query.")
+    isUdf: Optional[bool] = None
     modifiers: Optional[HogQLQueryModifiers] = Field(
         default=None, description="Modifiers used when performing the query"
     )
@@ -4642,6 +4646,7 @@ class FunnelsFilter(BaseModel):
     funnelWindowIntervalUnit: Optional[FunnelConversionWindowTimeUnit] = FunnelConversionWindowTimeUnit.DAY
     hiddenLegendBreakdowns: Optional[list[str]] = None
     layout: Optional[FunnelLayout] = FunnelLayout.VERTICAL
+    useUdf: Optional[bool] = None
 
 
 class HasPropertiesNode(RootModel[Union[EventsNode, EventsQuery, PersonsNode]]):
