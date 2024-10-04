@@ -228,6 +228,7 @@ export interface HogQLQueryModifiers {
     bounceRatePageViewMode?: 'count_pageviews' | 'uniq_urls' | 'uniq_page_screen_autocaptures'
     sessionTableVersion?: 'auto' | 'v1' | 'v2'
     propertyGroupsMode?: 'enabled' | 'disabled' | 'optimized'
+    useMaterializedViews?: boolean
 }
 
 export interface DataWarehouseEventsModifier {
@@ -1594,10 +1595,14 @@ export interface ExperimentTrendQueryResponse {
     results: Record<string, ExperimentVariantTrendResult>
 }
 
+export type CachedExperimentTrendQueryResponse = CachedQueryResponse<ExperimentTrendQueryResponse>
+
 export interface ExperimentFunnelQueryResponse {
     insight: InsightType.FUNNELS
     results: Record<string, ExperimentVariantFunnelResult>
 }
+
+export type CachedExperimentFunnelQueryResponse = CachedQueryResponse<ExperimentFunnelQueryResponse>
 
 export interface ExperimentFunnelQuery extends DataNode<ExperimentFunnelQueryResponse> {
     kind: NodeKind.ExperimentFunnelQuery
