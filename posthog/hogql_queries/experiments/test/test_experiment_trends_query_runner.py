@@ -282,7 +282,11 @@ class TestExperimentTrendsQueryRunner(ClickhouseTestMixin, APIBaseTest):
                     team=self.team,
                     event="$feature_flag_called",
                     distinct_id=f"user_{variant}_{i}",
-                    properties={feature_flag_property: variant},
+                    properties={
+                        "$feature_flag_response": variant,
+                        feature_flag_property: variant,
+                        "$feature_flag": feature_flag.key,
+                    },
                 )
 
         flush_persons_and_events()
@@ -530,7 +534,11 @@ class TestExperimentTrendsQueryRunner(ClickhouseTestMixin, APIBaseTest):
                     team=self.team,
                     event="$feature_flag_called",
                     distinct_id=f"user_{variant}_{i}",
-                    properties={feature_flag_property: variant},
+                    properties={
+                        "$feature_flag_response": variant,
+                        feature_flag_property: variant,
+                        "$feature_flag": feature_flag.key,
+                    },
                 )
 
         flush_persons_and_events()
@@ -596,7 +604,11 @@ class TestExperimentTrendsQueryRunner(ClickhouseTestMixin, APIBaseTest):
                     team=self.team,
                     event="$feature_flag_called",
                     distinct_id=f"user_{variant}_{i}",
-                    properties={feature_flag_property: variant},
+                    properties={
+                        "$feature_flag_response": variant,
+                        feature_flag_property: variant,
+                        "$feature_flag": feature_flag.key,
+                    },
                     timestamp=datetime(2023, 1, i + 1),
                 )
 
@@ -610,7 +622,11 @@ class TestExperimentTrendsQueryRunner(ClickhouseTestMixin, APIBaseTest):
             team=self.team,
             event="$feature_flag_called",
             distinct_id="user_test_3",
-            properties={feature_flag_property: "control"},
+            properties={
+                feature_flag_property: "control",
+                "$feature_flag_response": "control",
+                "$feature_flag": feature_flag.key,
+            },
             timestamp=datetime(2023, 1, 3),
         )
         _create_event(
@@ -624,7 +640,11 @@ class TestExperimentTrendsQueryRunner(ClickhouseTestMixin, APIBaseTest):
             team=self.team,
             event="$feature_flag_called",
             distinct_id="user_test_3",
-            properties={feature_flag_property: "control"},
+            properties={
+                feature_flag_property: "control",
+                "$feature_flag_response": "control",
+                "$feature_flag": feature_flag.key,
+            },
             timestamp=datetime(2023, 1, 9),
         )
 
@@ -693,7 +713,11 @@ class TestExperimentTrendsQueryRunner(ClickhouseTestMixin, APIBaseTest):
                     team=self.team,
                     event="$feature_flag_called",
                     distinct_id=f"user_{variant}_{i}",
-                    properties={feature_flag_property: variant},
+                    properties={
+                        "$feature_flag_response": variant,
+                        feature_flag_property: variant,
+                        "$feature_flag": feature_flag.key,
+                    },
                     timestamp=datetime(2023, 1, i + 1),
                 )
 
@@ -707,21 +731,33 @@ class TestExperimentTrendsQueryRunner(ClickhouseTestMixin, APIBaseTest):
             team=self.team,
             event="$feature_flag_called",
             distinct_id="user_test_3",
-            properties={feature_flag_property: "control"},
+            properties={
+                "$feature_flag_response": "control",
+                feature_flag_property: "control",
+                "$feature_flag": feature_flag.key,
+            },
             timestamp=datetime(2023, 1, 3),
         )
         _create_event(
             team=self.team,
             event="Some other event",
             distinct_id="user_test_3",
-            properties={feature_flag_property: "control"},
+            properties={
+                "$feature_flag_response": "control",
+                feature_flag_property: "control",
+                "$feature_flag": feature_flag.key,
+            },
             timestamp=datetime(2023, 1, 5),
         )
         _create_event(
             team=self.team,
             event="$feature_flag_called",
             distinct_id="user_test_3",
-            properties={feature_flag_property: "control"},
+            properties={
+                "$feature_flag_response": "control",
+                feature_flag_property: "control",
+                "$feature_flag": feature_flag.key,
+            },
             timestamp=datetime(2023, 1, 9),
         )
 
@@ -801,7 +837,12 @@ class TestExperimentTrendsQueryRunner(ClickhouseTestMixin, APIBaseTest):
                     team=self.team,
                     event="$feature_flag_called",
                     distinct_id=f"distinct_{variant}_{i}",
-                    properties={feature_flag_property: variant, "$user_id": f"user_{variant}_{i}"},
+                    properties={
+                        "$feature_flag_response": variant,
+                        feature_flag_property: variant,
+                        "$feature_flag": feature_flag.key,
+                        "$user_id": f"user_{variant}_{i}",
+                    },
                     timestamp=datetime(2023, 1, i + 1),
                 )
 
@@ -815,21 +856,36 @@ class TestExperimentTrendsQueryRunner(ClickhouseTestMixin, APIBaseTest):
             team=self.team,
             event="$feature_flag_called",
             distinct_id="distinct_test_3",
-            properties={feature_flag_property: "control", "$user_id": "user_test_3"},
+            properties={
+                "$feature_flag_response": "control",
+                feature_flag_property: "control",
+                "$feature_flag": feature_flag.key,
+                "$user_id": "user_test_3",
+            },
             timestamp=datetime(2023, 1, 3),
         )
         _create_event(
             team=self.team,
             event="Some other event",
             distinct_id="distinct_test_3",
-            properties={feature_flag_property: "control", "$user_id": "user_test_3"},
+            properties={
+                "$feature_flag_response": "control",
+                feature_flag_property: "control",
+                "$feature_flag": feature_flag.key,
+                "$user_id": "user_test_3",
+            },
             timestamp=datetime(2023, 1, 5),
         )
         _create_event(
             team=self.team,
             event="$feature_flag_called",
             distinct_id="distinct_test_3",
-            properties={feature_flag_property: "control", "$user_id": "user_test_3"},
+            properties={
+                "$feature_flag_response": "control",
+                feature_flag_property: "control",
+                "$feature_flag": feature_flag.key,
+                "$user_id": "user_test_3",
+            },
             timestamp=datetime(2023, 1, 9),
         )
 
@@ -922,7 +978,11 @@ class TestExperimentTrendsQueryRunner(ClickhouseTestMixin, APIBaseTest):
                     team=self.team,
                     event="$feature_flag_called",
                     distinct_id=f"user_{variant}_{i}",
-                    properties={feature_flag_property: variant},
+                    properties={
+                        "$feature_flag_response": variant,
+                        feature_flag_property: variant,
+                        "$feature_flag": feature_flag.key,
+                    },
                     timestamp=datetime(2023, 1, i + 1),
                 )
 
@@ -1039,7 +1099,11 @@ class TestExperimentTrendsQueryRunner(ClickhouseTestMixin, APIBaseTest):
                     team=self.team,
                     event="$feature_flag_called",
                     distinct_id=f"user_{variant}_{i}",
-                    properties={feature_flag_property: variant},
+                    properties={
+                        "$feature_flag_response": variant,
+                        feature_flag_property: variant,
+                        "$feature_flag": feature_flag.key,
+                    },
                     timestamp=datetime(2020, 1, i + 1),
                 )
 
@@ -1134,7 +1198,11 @@ class TestExperimentTrendsQueryRunner(ClickhouseTestMixin, APIBaseTest):
                     {
                         "event": "$feature_flag_called",
                         "timestamp": "2020-01-02",
-                        "properties": {ff_property: "control"},
+                        "properties": {
+                            "$feature_flag_response": "control",
+                            ff_property: "control",
+                            "$feature_flag": feature_flag.key,
+                        },
                     },
                 ],
                 "user_control_2": [
@@ -1142,19 +1210,39 @@ class TestExperimentTrendsQueryRunner(ClickhouseTestMixin, APIBaseTest):
                     {
                         "event": "$feature_flag_called",
                         "timestamp": "2020-01-02",
-                        "properties": {ff_property: "control"},
+                        "properties": {
+                            "$feature_flag_response": "control",
+                            ff_property: "control",
+                            "$feature_flag": feature_flag.key,
+                        },
                     },
                 ],
                 "user_test_1": [
                     {"event": "$pageview", "timestamp": "2020-01-02", "properties": {ff_property: "test"}},
                     {"event": "$pageview", "timestamp": "2020-01-03", "properties": {ff_property: "test"}},
                     {"event": "$pageview", "timestamp": "2020-01-04", "properties": {ff_property: "test"}},
-                    {"event": "$feature_flag_called", "timestamp": "2020-01-02", "properties": {ff_property: "test"}},
+                    {
+                        "event": "$feature_flag_called",
+                        "timestamp": "2020-01-02",
+                        "properties": {
+                            "$feature_flag_response": "test",
+                            ff_property: "test",
+                            "$feature_flag": feature_flag.key,
+                        },
+                    },
                 ],
                 "user_test_2": [
                     {"event": "$pageview", "timestamp": "2020-01-02", "properties": {ff_property: "test"}},
                     {"event": "$pageview", "timestamp": "2020-01-03", "properties": {ff_property: "test"}},
-                    {"event": "$feature_flag_called", "timestamp": "2020-01-02", "properties": {ff_property: "test"}},
+                    {
+                        "event": "$feature_flag_called",
+                        "timestamp": "2020-01-02",
+                        "properties": {
+                            "$feature_flag_response": "test",
+                            ff_property: "test",
+                            "$feature_flag": feature_flag.key,
+                        },
+                    },
                 ],
             },
             self.team,
@@ -1233,7 +1321,11 @@ class TestExperimentTrendsQueryRunner(ClickhouseTestMixin, APIBaseTest):
                     {
                         "event": "$feature_flag_called",
                         "timestamp": "2020-01-02",
-                        "properties": {ff_property: "control"},
+                        "properties": {
+                            "$feature_flag_response": "control",
+                            ff_property: "control",
+                            "$feature_flag": feature_flag.key,
+                        },
                     },
                 ],
                 "user_control_2": [
@@ -1241,19 +1333,39 @@ class TestExperimentTrendsQueryRunner(ClickhouseTestMixin, APIBaseTest):
                     {
                         "event": "$feature_flag_called",
                         "timestamp": "2020-01-02",
-                        "properties": {ff_property: "control"},
+                        "properties": {
+                            "$feature_flag_response": "control",
+                            ff_property: "control",
+                            "$feature_flag": feature_flag.key,
+                        },
                     },
                 ],
                 "user_test_1": [
                     {"event": "$pageview", "timestamp": "2020-01-02", "properties": {ff_property: "test"}},
                     {"event": "$pageview", "timestamp": "2020-01-03", "properties": {ff_property: "test"}},
                     {"event": "$pageview", "timestamp": "2020-01-04", "properties": {ff_property: "test"}},
-                    {"event": "$feature_flag_called", "timestamp": "2020-01-02", "properties": {ff_property: "test"}},
+                    {
+                        "event": "$feature_flag_called",
+                        "timestamp": "2020-01-02",
+                        "properties": {
+                            "$feature_flag_response": "test",
+                            ff_property: "test",
+                            "$feature_flag": feature_flag.key,
+                        },
+                    },
                 ],
                 "user_test_2": [
                     {"event": "$pageview", "timestamp": "2020-01-02", "properties": {ff_property: "test"}},
                     {"event": "$pageview", "timestamp": "2020-01-03", "properties": {ff_property: "test"}},
-                    {"event": "$feature_flag_called", "timestamp": "2020-01-02", "properties": {ff_property: "test"}},
+                    {
+                        "event": "$feature_flag_called",
+                        "timestamp": "2020-01-02",
+                        "properties": {
+                            "$feature_flag_response": "test",
+                            ff_property: "test",
+                            "$feature_flag": feature_flag.key,
+                        },
+                    },
                 ],
             },
             self.team,
