@@ -19,19 +19,22 @@ import { BaseMathType, ChartDisplayType, FilterType } from '~/types'
 import { experimentLogic } from '../experimentLogic'
 import { commonActionFilterProps } from './Selectors'
 
-export function PrimaryGoalTrends(): JSX.Element {
-    const { experiment, isExperimentRunning, editingPrimaryMetricIndex } = useValues(experimentLogic)
+export function TrendsMetricForm({ isSecondary = false }: { isSecondary?: boolean }): JSX.Element {
+    const { experiment, isExperimentRunning, editingPrimaryMetricIndex, editingSecondaryMetricIndex } =
+        useValues(experimentLogic)
     const { setTrendsMetric, setTrendsExposureMetric, setExperiment } = useActions(experimentLogic)
     const { currentTeam } = useValues(teamLogic)
     const hasFilters = (currentTeam?.test_account_filters || []).length > 0
     const [activeTab, setActiveTab] = useState('main')
 
-    if (!editingPrimaryMetricIndex && editingPrimaryMetricIndex !== 0) {
+    const metrics = isSecondary ? experiment.metrics_secondary : experiment.metrics
+    const metricIdx = isSecondary ? editingSecondaryMetricIndex : editingPrimaryMetricIndex
+
+    if (!metricIdx && metricIdx !== 0) {
         return <></>
     }
 
-    const metricIdx = editingPrimaryMetricIndex
-    const currentMetric = experiment.metrics[metricIdx] as ExperimentTrendsQuery
+    const currentMetric = metrics[metricIdx] as ExperimentTrendsQuery
 
     return (
         <>
@@ -52,6 +55,7 @@ export function PrimaryGoalTrends(): JSX.Element {
                                             setTrendsMetric({
                                                 metricIdx,
                                                 name: newName,
+                                                isSecondary,
                                             })
                                         }}
                                     />
@@ -69,6 +73,7 @@ export function PrimaryGoalTrends(): JSX.Element {
                                         setTrendsMetric({
                                             metricIdx,
                                             series,
+                                            isSecondary,
                                         })
                                     }}
                                     typeKey="experiment-metric"
@@ -85,6 +90,7 @@ export function PrimaryGoalTrends(): JSX.Element {
                                             setTrendsMetric({
                                                 metricIdx,
                                                 filterTestAccounts: checked,
+                                                isSecondary,
                                             })
                                         }}
                                         fullWidth
@@ -124,9 +130,10 @@ export function PrimaryGoalTrends(): JSX.Element {
                                                 : 'border-border'
                                         }`}
                                         onClick={() => {
+                                            const metricsField = isSecondary ? 'metrics_secondary' : 'metrics'
                                             setExperiment({
                                                 ...experiment,
-                                                metrics: experiment.metrics.map((metric, idx) =>
+                                                [metricsField]: metrics.map((metric, idx) =>
                                                     idx === metricIdx
                                                         ? { ...metric, exposure_query: undefined }
                                                         : metric
@@ -154,9 +161,10 @@ export function PrimaryGoalTrends(): JSX.Element {
                                                 : 'border-border'
                                         }`}
                                         onClick={() => {
+                                            const metricsField = isSecondary ? 'metrics_secondary' : 'metrics'
                                             setExperiment({
                                                 ...experiment,
-                                                metrics: experiment.metrics.map((metric, idx) =>
+                                                [metricsField]: metrics.map((metric, idx) =>
                                                     idx === metricIdx
                                                         ? {
                                                               ...metric,
@@ -225,6 +233,7 @@ export function PrimaryGoalTrends(): JSX.Element {
                                                 setTrendsExposureMetric({
                                                     metricIdx,
                                                     series,
+                                                    isSecondary,
                                                 })
                                             }}
                                             typeKey="experiment-metric"
@@ -244,6 +253,7 @@ export function PrimaryGoalTrends(): JSX.Element {
                                                     setTrendsExposureMetric({
                                                         metricIdx,
                                                         filterTestAccounts: checked,
+                                                        isSecondary,
                                                     })
                                                 }}
                                                 fullWidth
