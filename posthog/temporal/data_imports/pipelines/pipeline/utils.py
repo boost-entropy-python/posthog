@@ -1,6 +1,7 @@
 import json
 from collections.abc import Sequence
 from typing import Any
+from dateutil import parser
 import uuid
 import pyarrow as pa
 from dlt.common.libs.deltalake import ensure_delta_compatible_arrow_schema
@@ -27,6 +28,24 @@ DLT_TO_PA_TYPE_MAP = {
 
 def normalize_column_name(column_name: str) -> str:
     return NamingConvention().normalize_identifier(column_name)
+
+
+def safe_parse_datetime(date_str):
+    try:
+        if date_str is None:
+            return None
+
+        if isinstance(date_str, pa.StringScalar):
+            scalar = date_str.as_py()
+
+            if scalar is None:
+                return None
+
+            return parser.parse(scalar)
+
+        return parser.parse(date_str)
+    except (ValueError, OverflowError, TypeError):
+        return None
 
 
 def _get_primary_keys(resource: DltResource) -> list[Any] | None:
@@ -60,6 +79,9 @@ def _handle_null_columns_with_definitions(table: pa.Table, resource: DltResource
         return table
 
     for field_name, data_type in column_hints.items():
+        if data_type is None:
+            continue
+
         normalized_field_name = normalize_column_name(field_name)
         # If the table doesn't have all fields, then add a field with all Nulls and the correct field type
         if normalized_field_name not in table.schema.names:
@@ -119,11 +141,21 @@ def _evolve_pyarrow_schema(table: pa.Table, delta_schema: deltalake.Schema | Non
             # If the deltalake schema has a different type to the pyarrows table, then cast to the deltalake field type
             py_arrow_table_column = table.column(field.name)
             if field.type != py_arrow_table_column.type:
-                table = table.set_column(
-                    table.schema.get_field_index(field.name),
-                    field.name,
-                    table.column(field.name).cast(field.type),
-                )
+                if isinstance(field.type, pa.TimestampType):
+                    timestamp_array = pa.array(
+                        [safe_parse_datetime(s) for s in table.column(field.name)], type=field.type
+                    )
+                    table = table.set_column(
+                        table.schema.get_field_index(field.name),
+                        field.name,
+                        timestamp_array,
+                    )
+                else:
+                    table = table.set_column(
+                        table.schema.get_field_index(field.name),
+                        field.name,
+                        table.column(field.name).cast(field.type),
+                    )
 
     # Change types based on what deltalake tables support
     return table.cast(ensure_delta_compatible_arrow_schema(table.schema))
@@ -174,7 +206,7 @@ def _update_incremental_state(schema: ExternalDataSchema | None, table: pa.Table
     # TODO(@Gilbert09): support different operations here (e.g. min)
     last_value = numpy_arr.max()
 
-    logger.debug(f"Updating incremental_field_last_value_v2 with {last_value}")
+    logger.debug(f"Updating incremental_field_last_value with {last_value}")
 
     schema.update_incremental_field_last_value(last_value)
 
