@@ -1,5 +1,3 @@
-import asyncio
-import dataclasses
 import decimal
 import json
 from collections.abc import Sequence
@@ -18,14 +16,9 @@ from dlt.common.libs.deltalake import ensure_delta_compatible_arrow_schema
 from dlt.sources import DltResource
 import deltalake as deltalake
 from django.db.models import F
-from posthog.constants import DATA_WAREHOUSE_COMPACTION_TASK_QUEUE
-from temporalio.common import RetryPolicy
-from temporalio.exceptions import WorkflowAlreadyStartedError
-from posthog.temporal.common.client import sync_connect
 from posthog.temporal.common.logger import FilteringBoundLogger
 from dlt.common.data_types.typing import TDataType
 from dlt.common.normalizers.naming.snake_case import NamingConvention
-from posthog.temporal.data_imports.deltalake_compaction_job import DeltalakeCompactionJobWorkflowInputs
 from posthog.temporal.data_imports.pipelines.pipeline.typings import SourceResponse
 from posthog.warehouse.models import ExternalDataJob, ExternalDataSchema
 
@@ -245,12 +238,12 @@ def _evolve_pyarrow_schema(table: pa.Table, delta_schema: deltalake.Schema | Non
 
             py_arrow_table_field = table.field(field.name)
             # If the deltalake schema expects no nulls, but the pyarrow schema is nullable, then fill the nulls
-            if not field.nullable and py_arrow_table_field.nullable and py_arrow_table_column.null_count > 0:
+            if not field.nullable and py_arrow_table_field.nullable:
                 filled_nulls_arr = py_arrow_table_column.fill_null(
                     fill_value=get_default_value_for_pyarrow_type(py_arrow_table_field.type)
                 )
                 table = table.set_column(
-                    table.schema.get_field_index(field.name), field.name, filled_nulls_arr.combine_chunks()
+                    table.schema.get_field_index(field.name), field, filled_nulls_arr.combine_chunks()
                 )
 
     # Change types based on what deltalake tables support
@@ -372,6 +365,19 @@ def _get_max_decimal_type(values: list[decimal.Decimal]) -> pa.Decimal128Type | 
         max_scale = max(scale, max_scale)
 
     return build_pyarrow_decimal_type(max_precision, max_scale)
+
+
+def _build_decimal_type_from_defaults(values: list[decimal.Decimal | None]) -> pa.Array:
+    for decimal_type in [
+        pa.decimal128(38, DEFAULT_NUMERIC_SCALE),
+        pa.decimal256(DEFAULT_NUMERIC_PRECISION, DEFAULT_NUMERIC_SCALE),
+    ]:
+        try:
+            return pa.array(values, type=decimal_type)
+        except:
+            pass
+
+    raise ValueError("Cant build a decimal type from defaults")
 
 
 def _python_type_to_pyarrow_type(type_: type, value: Any):
@@ -496,10 +502,15 @@ def _process_batch(table_data: list[dict], schema: Optional[pa.Schema] = None) -
 
             new_field_type = _get_max_decimal_type([x for x in all_values_as_decimals_or_none if x is not None])
 
-            number_arr = pa.array(
-                all_values_as_decimals_or_none,
-                type=new_field_type,
-            )
+            try:
+                number_arr = pa.array(
+                    all_values_as_decimals_or_none,
+                    type=new_field_type,
+                )
+            except pa.ArrowInvalid as e:
+                if len(e.args) > 0 and "does not fit into precision" in e.args[0]:
+                    number_arr = _build_decimal_type_from_defaults(all_values_as_decimals_or_none)
+
             columnar_table_data[field_name] = number_arr
             py_type = decimal.Decimal
             unique_types_in_column = {decimal.Decimal}
@@ -559,28 +570,3 @@ def _process_batch(table_data: list[dict], schema: Optional[pa.Schema] = None) -
                 arrow_schema = arrow_schema.remove(arrow_schema.get_field_index(str(column)))
 
     return pa.Table.from_pydict(columnar_table_data, schema=arrow_schema)
-
-
-def trigger_compaction_job(job: ExternalDataJob, schema: ExternalDataSchema) -> str:
-    temporal = sync_connect()
-    workflow_id = f"{schema.id}-compaction"
-
-    try:
-        asyncio.run(
-            temporal.start_workflow(
-                workflow="deltalake-compaction-job",
-                arg=dataclasses.asdict(
-                    DeltalakeCompactionJobWorkflowInputs(team_id=job.team_id, external_data_job_id=job.id)
-                ),
-                id=workflow_id,
-                task_queue=str(DATA_WAREHOUSE_COMPACTION_TASK_QUEUE),
-                retry_policy=RetryPolicy(
-                    maximum_attempts=1,
-                    non_retryable_error_types=["NondeterminismError"],
-                ),
-            )
-        )
-    except WorkflowAlreadyStartedError:
-        pass
-
-    return workflow_id
