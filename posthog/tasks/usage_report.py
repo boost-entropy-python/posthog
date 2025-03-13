@@ -7,12 +7,13 @@ from typing import Any, Literal, Optional, TypedDict, Union
 
 import requests
 import structlog
+from cachetools import cached
 from celery import shared_task
 from dateutil import parser
 from django.conf import settings
 from django.db import connection
 from django.db.models import Count, Q, Sum
-from posthoganalytics.client import Client
+from posthoganalytics.client import Client as PostHogClient
 from psycopg import sql
 from retry import retry
 from posthog.exceptions_capture import capture_exception
@@ -289,6 +290,11 @@ def get_org_user_count(organization_id: str) -> int:
     return OrganizationMembership.objects.filter(organization_id=organization_id).count()
 
 
+@cached(cache={})
+def get_ph_client(*args: Any, **kwargs: Any) -> PostHogClient:
+    return PostHogClient("sTMFPsFhdP1Ssg", *args, **kwargs)
+
+
 @shared_task(**USAGE_REPORT_TASK_KWARGS, max_retries=3, rate_limit="5/s")
 def send_report_to_billing_service(org_id: str, report: dict[str, Any]) -> None:
     if not settings.EE_AVAILABLE:
@@ -298,13 +304,17 @@ def send_report_to_billing_service(org_id: str, report: dict[str, Any]) -> None:
     from ee.billing.billing_types import BillingStatus
     from ee.settings import BILLING_SERVICE_URL
 
+    logger.info(f"[Send Usage Report To Billing] Sending Usage Report to billing for organization: {org_id}")
+
     try:
         license = get_cached_instance_license()
         if not license or not license.is_v2_license:
+            logger.info(f"[Send Usage Report To Billing] No license found for organization: {org_id}")
             return
 
         organization = Organization.objects.get(id=org_id)
         if not organization:
+            logger.info(f"[Send Usage Report To Billing] No organization found for organization: {org_id}")
             return
 
         token = build_billing_token(license, organization)
@@ -312,23 +322,25 @@ def send_report_to_billing_service(org_id: str, report: dict[str, Any]) -> None:
         if token:
             headers["Authorization"] = f"Bearer {token}"
 
-        response = requests.post(f"{BILLING_SERVICE_URL}/api/usage", json=report, headers=headers, timeout=15)
+        response = requests.post(f"{BILLING_SERVICE_URL}/api/usage", json=report, headers=headers, timeout=30)
+        logger.info(f"[Send Usage Report To Billing] Usage response: {response.status_code}")
         if response.status_code != 200:
             raise Exception(
                 f"Failed to send usage report to billing service code:{response.status_code} response:{response.text}"
             )
 
-        logger.info(f"UsageReport sent to Billing for organization: {organization.id}")
+        logger.info(f"[Send Usage Report To Billing] Usage Report sent to Billing for organization: {org_id}")
 
         response_data: BillingStatus = response.json()
         BillingManager(license).update_org_details(organization, response_data)
 
     except Exception as err:
-        logger.exception(f"UsageReport failed sending to Billing for organization: {organization.id}: {err}")
+        logger.exception(
+            f"[Send Usage Report To Billing] Usage Report failed sending to Billing for organization: {org_id}: {err}"
+        )
         capture_exception(err)
-        pha_client = Client("sTMFPsFhdP1Ssg", sync_mode=True)
         capture_event(
-            pha_client=pha_client,
+            pha_client=get_ph_client(sync_mode=True),
             name=f"organization usage report to billing service failure",
             organization_id=org_id,
             properties={"err": str(err)},
@@ -798,7 +810,7 @@ def capture_report(
 ) -> None:
     if not org_id and not team_id:
         raise ValueError("Either org_id or team_id must be provided")
-    pha_client = Client("sTMFPsFhdP1Ssg", sync_mode=True)
+    pha_client = get_ph_client(sync_mode=True)
     try:
         capture_event(
             pha_client=pha_client,
