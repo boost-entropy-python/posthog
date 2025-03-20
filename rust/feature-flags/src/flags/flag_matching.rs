@@ -21,6 +21,7 @@ use petgraph::graph::DiGraph;
 use serde_json::Value;
 use sha1::{Digest, Sha1};
 use sqlx::{postgres::PgQueryResult, Acquire, FromRow, Row};
+use std::collections::hash_map::Entry;
 use std::fmt::Write;
 use std::sync::Arc;
 use std::{
@@ -439,7 +440,26 @@ impl FeatureFlagMatcher {
 
         // Step 1: Evaluate flags with locally computable property overrides first
         for flag in &feature_flags.flags {
-            if !flag.active || flag.deleted {
+            // we shouldn't have any deleted flags (the query should filter them out), but just in case
+            if flag.deleted {
+                continue;
+            }
+
+            // if the flag is not active, we can insert that immediately and go on to the next flag
+            if !flag.active {
+                flag_details_map.insert(
+                    flag.key.clone(),
+                    FlagDetails::create(
+                        flag,
+                        &FeatureFlagMatch {
+                            matches: false,
+                            variant: None,
+                            reason: FeatureFlagMatchReason::NoConditionMatch, // TODO: this is technically not true; IMO "disabled" and "no matches" are different things, but this is how the old service does it.  Something to fix in the future.
+                            condition_index: None,
+                            payload: None,
+                        },
+                    ),
+                );
                 continue;
             }
 
@@ -801,7 +821,7 @@ impl FeatureFlagMatcher {
     /// It compares the current match reason with a new match reason and returns the higher priority one.
     /// The priority is determined by the ordering of FeatureFlagMatchReason variants.
     /// It's used to keep track of the most significant reason why a flag matched or didn't match,
-    /// which is especially useful when multiple conditions are evaluated.
+    /// especially useful when multiple conditions are evaluated.
     fn get_highest_priority_match_evaluation(
         &self,
         current_match: FeatureFlagMatchReason,
@@ -999,13 +1019,13 @@ impl FeatureFlagMatcher {
         // Split the cohorts into static and dynamic, since the dynamic ones have property filters
         // and we need to evaluate them based on the target properties, whereas the static ones are
         // purely based on person properties and are membership-based.
-        let (static_cohorts, dynamic_cohorts): (Vec<_>, Vec<_>) =
-            cohorts.iter().partition(|c| c.is_static);
+        let (static_cohorts, _): (Vec<_>, Vec<_>) = cohorts.iter().partition(|c| c.is_static);
 
         // Store all cohort match results in a HashMap to avoid re-evaluating the same cohort multiple times,
         // since the same cohort could appear in multiple property filters.
         let mut cohort_matches = HashMap::new();
 
+        // Always evaluate static cohorts first
         if !static_cohorts.is_empty() {
             let results = evaluate_static_cohorts(
                 self.reader.clone(),
@@ -1016,14 +1036,16 @@ impl FeatureFlagMatcher {
             cohort_matches.extend(results);
         }
 
-        if !dynamic_cohorts.is_empty() {
-            for filter in cohort_property_filters {
-                let cohort_id = filter
-                    .get_cohort_id()
-                    .ok_or(FlagError::CohortFiltersParsingError)?;
+        // For any cohorts not yet evaluated (i.e., dynamic ones), evaluate them
+        for filter in cohort_property_filters {
+            let cohort_id = filter
+                .get_cohort_id()
+                .ok_or(FlagError::CohortFiltersParsingError)?;
+
+            if let Entry::Vacant(e) = cohort_matches.entry(cohort_id) {
                 let match_result =
                     evaluate_dynamic_cohorts(cohort_id, target_properties, &cohorts)?;
-                cohort_matches.insert(cohort_id, match_result);
+                e.insert(match_result);
             }
         }
 
@@ -1400,6 +1422,18 @@ fn evaluate_dynamic_cohorts(
     target_properties: &HashMap<String, Value>,
     cohorts: &[Cohort],
 ) -> Result<bool, FlagError> {
+    // First check if this is a static cohort
+    let initial_cohort = cohorts
+        .iter()
+        .find(|c| c.id == initial_cohort_id)
+        .ok_or(FlagError::CohortNotFound(initial_cohort_id.to_string()))?;
+
+    // If it's static, we don't need to evaluate dependencies - the membership was already
+    // checked in evaluate_static_cohorts and stored in cohort_matches
+    if initial_cohort.is_static {
+        return Ok(false); // Static cohorts are handled by evaluate_static_cohorts
+    }
+
     let cohort_dependency_graph = build_cohort_dependency_graph(initial_cohort_id, cohorts)?;
 
     // We need to sort cohorts topologically to ensure we evaluate dependencies before the cohorts that depend on them.
@@ -2000,6 +2034,7 @@ mod tests {
 
     use super::*;
     use crate::{
+        api::types::FlagEvaluationReason,
         flags::flag_models::{
             FeatureFlagRow, FlagFilters, MultivariateFlagOptions, MultivariateFlagVariant,
         },
@@ -5106,5 +5141,156 @@ mod tests {
         // so it should fall back to hash-based variant computation
         assert!(result_invalid.matches);
         assert!(result_invalid.variant.is_some()); // Will be either "control" or "test" based on hash
+    }
+
+    #[tokio::test]
+    async fn test_static_cohort_evaluation_skips_dependency_graph() {
+        let reader = setup_pg_reader_client(None).await;
+        let writer = setup_pg_writer_client(None).await;
+        let cohort_cache = Arc::new(CohortCacheManager::new(reader.clone(), None, None));
+        let team = insert_new_team_in_pg(reader.clone(), None).await.unwrap();
+
+        // Insert a static cohort
+        let cohort = insert_cohort_for_team_in_pg(
+            reader.clone(),
+            team.id,
+            Some("Static Cohort".to_string()),
+            json!({}), // Static cohorts don't have property filters
+            true,      // is_static = true
+        )
+        .await
+        .unwrap();
+
+        // Insert a person
+        let distinct_id = "static_user".to_string();
+        insert_person_for_team_in_pg(
+            reader.clone(),
+            team.id,
+            distinct_id.clone(),
+            Some(json!({"email": "static@user.com"})),
+        )
+        .await
+        .unwrap();
+
+        // Get person ID and add to cohort
+        let person_id = get_person_id_by_distinct_id(reader.clone(), team.id, &distinct_id)
+            .await
+            .unwrap();
+        add_person_to_cohort(reader.clone(), person_id, cohort.id)
+            .await
+            .unwrap();
+
+        // Define a flag that references the static cohort
+        let flag = create_test_flag(
+            None,
+            Some(team.id),
+            None,
+            None,
+            Some(FlagFilters {
+                groups: vec![FlagGroupType {
+                    properties: Some(vec![PropertyFilter {
+                        key: "id".to_string(),
+                        value: json!(cohort.id),
+                        operator: Some(OperatorType::In),
+                        prop_type: "cohort".to_string(),
+                        group_type_index: None,
+                        negation: Some(false),
+                    }]),
+                    rollout_percentage: Some(100.0),
+                    variant: None,
+                }],
+                multivariate: None,
+                aggregation_group_type_index: None,
+                payloads: None,
+                super_groups: None,
+            }),
+            None,
+            None,
+            None,
+        );
+
+        let mut matcher = FeatureFlagMatcher::new(
+            distinct_id.clone(),
+            team.id,
+            team.project_id,
+            reader.clone(),
+            writer.clone(),
+            cohort_cache.clone(),
+            None,
+            None,
+        );
+
+        // This should not throw CohortNotFound because we skip dependency graph evaluation for static cohorts
+        let result = matcher.get_match(&flag, None, None).await;
+        assert!(result.is_ok(), "Should not throw CohortNotFound error");
+
+        let match_result = result.unwrap();
+        assert!(match_result.matches, "User should match the static cohort");
+    }
+
+    #[tokio::test]
+    async fn test_inactive_flags_included_as_false() {
+        let reader = setup_pg_reader_client(None).await;
+        let writer = setup_pg_writer_client(None).await;
+        let cohort_cache = Arc::new(CohortCacheManager::new(reader.clone(), None, None));
+        let team = insert_new_team_in_pg(reader.clone(), None).await.unwrap();
+
+        // Create one active and one inactive flag
+        let active_flag = create_test_flag(
+            Some(1),
+            Some(team.id),
+            Some("Active Flag".to_string()),
+            Some("active_flag".to_string()),
+            None,
+            Some(false), // not deleted
+            Some(true),  // active
+            None,
+        );
+
+        let inactive_flag = create_test_flag(
+            Some(2),
+            Some(team.id),
+            Some("Inactive Flag".to_string()),
+            Some("inactive_flag".to_string()),
+            None,
+            Some(false), // not deleted
+            Some(false), // inactive
+            None,
+        );
+
+        let flags = FeatureFlagList {
+            flags: vec![active_flag, inactive_flag],
+        };
+
+        let mut matcher = FeatureFlagMatcher::new(
+            "test_user".to_string(),
+            team.id,
+            team.project_id,
+            reader,
+            writer,
+            cohort_cache,
+            None,
+            None,
+        );
+
+        let result = matcher
+            .evaluate_flags_with_overrides(flags, None, None, None)
+            .await;
+
+        // Check that both flags are in the response
+        assert!(result.flags.contains_key("active_flag"));
+        assert!(result.flags.contains_key("inactive_flag"));
+
+        // Check that inactive flag is false with correct reason
+        let inactive_flag_details = result.flags.get("inactive_flag").unwrap();
+        assert!(!inactive_flag_details.enabled);
+        assert_eq!(
+            inactive_flag_details.reason,
+            FlagEvaluationReason {
+                code: "no_condition_match".to_string(),
+                condition_index: None,
+                description: Some("No matching condition set".to_string())
+            }
+        );
     }
 }
