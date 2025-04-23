@@ -400,17 +400,27 @@ class SessionRecordingViewSet(TeamAndOrgViewSetMixin, viewsets.GenericViewSet, U
         return recording
 
     def list(self, request: request.Request, *args: Any, **kwargs: Any) -> Response:
+        logger.error(
+            "list_recordings_response_started",
+        )
+
         user_distinct_id = cast(User, request.user).distinct_id
 
         try:
             query = filter_from_params_to_query(request.GET.dict())
 
             self._maybe_report_recording_list_filters_changed(request, team=self.team)
-            return list_recordings_response(
+            response = list_recordings_response(
                 list_recordings_from_query(query, cast(User, request.user), team=self.team),
                 context=self.get_serializer_context(),
             )
 
+            logger.error(
+                "list_recordings_response_successful",
+                user_distinct_id=user_distinct_id,
+                headers=response.headers,
+            )
+            return response
         except CHQueryErrorTooManySimultaneousQueries:
             raise Throttled(detail="Too many simultaneous queries. Try again later.")
         except (ServerException, Exception) as e:
