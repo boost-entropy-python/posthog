@@ -149,19 +149,26 @@ export function PanelLayout({ mainRef }: { mainRef: React.RefObject<HTMLElement>
             >
                 <PanelLayoutNavBar>
                     {activePanelIdentifier === 'Project' && (
-                        <ProjectTree root="project://" sortMethod="folder" logicKey={PROJECT_TREE_KEY} />
+                        <ProjectTree
+                            root="project://"
+                            sortMethod="folder"
+                            logicKey={PROJECT_TREE_KEY}
+                            searchPlaceholder="Search by user, type, or name"
+                        />
                     )}
                     {activePanelIdentifier === 'Recent' && (
-                        <ProjectTree root="project://" sortMethod="recent" logicKey={PROJECT_TREE_KEY} />
+                        <ProjectTree
+                            root="project://"
+                            sortMethod="recent"
+                            logicKey={PROJECT_TREE_KEY}
+                            searchPlaceholder="Search by user, type, or name"
+                        />
                     )}
                     {activePanelIdentifier === 'Products' && (
                         <ProjectTree root="products://" searchPlaceholder="Search products" />
                     )}
                     {activePanelIdentifier === 'Shortcuts' && (
                         <ProjectTree root="shortcuts://" searchPlaceholder="Search your shortcuts" />
-                    )}
-                    {activePanelIdentifier === 'New' && (
-                        <ProjectTree root="new://" searchPlaceholder="Search new items" />
                     )}
                     {activePanelIdentifier === 'Games' && (
                         <ProjectTree root="games://" searchPlaceholder="Search games" />
