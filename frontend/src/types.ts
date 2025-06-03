@@ -351,7 +351,7 @@ export interface MinimalHedgehogConfig {
     accessories: string[]
 }
 
-export type HedgehogSkin = 'default' | 'spiderhog'
+export type HedgehogSkin = 'default' | 'spiderhog' | 'robohog'
 
 export interface HedgehogConfig extends MinimalHedgehogConfig {
     enabled: boolean
@@ -4628,6 +4628,7 @@ export type BatchExportServiceS3 = {
         endpoint_url: string | null
         file_format: string
         max_file_size_mb: number | null
+        use_virtual_style_addressing: boolean
     }
 }
 
@@ -5141,6 +5142,7 @@ export interface HogFunctionMappingTemplateType extends HogFunctionMappingType {
 export type HogFunctionTypeType =
     | 'destination'
     | 'internal_destination'
+    | 'source_webhook'
     | 'site_destination'
     | 'site_app'
     | 'transformation'
@@ -5279,6 +5281,12 @@ export type HogFunctionInvocationGlobals = {
             properties: Record<string, any>
         }
     >
+    // Only applies to sources
+    request?: {
+        body: Record<string, any>
+        headers: Record<string, string>
+        ip?: string
+    }
 }
 
 export type HogFunctionTestInvocationResult = {
@@ -5439,7 +5447,7 @@ export interface ProductManifest {
     treeItemsNew?: FileSystemImport[]
     treeItemsProducts?: FileSystemImport[]
     treeItemsGames?: FileSystemImport[]
-    treeItemsDataManagement?: FileSystemImport[]
+    treeItemsMetadata?: FileSystemImport[]
 }
 
 export interface ProjectTreeRef {
