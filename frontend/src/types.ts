@@ -1907,6 +1907,8 @@ export interface BillingType {
     }
     billing_plan: BillingPlan | null
     startup_program_label?: StartupProgramLabel | null
+    startup_program_label_previous?: StartupProgramLabel | null
+    is_annual_plan_customer?: boolean | null
     account_owner?: {
         email?: string
         name?: string
@@ -5121,6 +5123,7 @@ export type HogFunctionInputSchemaType = {
 
 export type HogFunctionInputType = {
     value: any
+    templating?: 'hog' | 'liquid'
     secret?: boolean
     bytecode?: any
 }
