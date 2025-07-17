@@ -198,6 +198,7 @@ export const FEATURE_FLAGS = {
     ENVIRONMENTS: 'environments', // owner: @Twixes #team-product-analytics
     REPLAY_TEMPLATES: 'replay-templates', // owner: @raquelmsmith #team-replay
     MESSAGING: 'messaging', // owner @haven #team-messaging
+    INVITE_PROJECT_ACCESS: 'invite-project-access', // owner: @team-platform-features
     MESSAGING_EARLY_ACCESS: 'messaging-product', // owner @haven #team-messaging
     ENVIRONMENTS_ROLLBACK: 'environments-rollback', // owner: @yasen #team-platform
     AI_SURVEY_RESPONSE_SUMMARY: 'ai-survey-response-summary', // owner: #team-surveys
@@ -271,7 +272,6 @@ export const FEATURE_FLAGS = {
     LINEAGE_DEPENDENCY_VIEW: 'lineage-dependency-view', // owner: @phixMe #team-data-warehouse
     TRACK_MEMORY_USAGE: 'track-memory-usage', // owner: @pauldambra #team-replay
     TAXONOMIC_EVENT_SORTING: 'taxonomic-event-sorting', // owner: @pauldambra #team-replay
-    SQL_EDITOR_TREE_VIEW: 'sql-editor-tree-view', // owner: @EDsCODE #team-data-warehouse
     AI_HOG_FUNCTION_CREATION: 'ai-hog-function-creation', // owner: @meikel #team-cdp
     REPLAY_FILTERS_IN_PLAYLIST_MAX_AI: 'replay-filters-in-playlist-max-ai', // owner: @veryayskiy #team-replay
     REPLAY_ZEN_MODE: 'replay-zen-mode', // owner: @veryayskiy #team-replay
