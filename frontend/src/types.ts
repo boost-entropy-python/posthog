@@ -2433,6 +2433,7 @@ export type BreakdownType =
     | 'hogql'
     | 'data_warehouse'
     | 'data_warehouse_person_property'
+    | 'revenue_analytics'
 export type IntervalType = 'minute' | 'hour' | 'day' | 'week' | 'month'
 export type SimpleIntervalType = 'day' | 'month'
 export type SmoothingType = number
@@ -5727,4 +5728,16 @@ export enum OnboardingStepKey {
     AUTHORIZED_DOMAINS = 'authorized_domains',
     SOURCE_MAPS = 'source_maps',
     ALERTS = 'alerts',
+}
+
+export interface Dataset {
+    id: string
+    name: string
+    description: string | null
+    metadata: Record<string, any> | null
+    team: number
+    created_at: string
+    updated_at: string
+    created_by: UserBasicType
+    deleted: boolean
 }
