@@ -14085,7 +14085,7 @@
                     "type": "boolean"
                 },
                 "sessionTableVersion": {
-                    "enum": ["auto", "v1", "v2"],
+                    "enum": ["auto", "v1", "v2", "v3"],
                     "type": "string"
                 },
                 "sessionsV2JoinMode": {
@@ -16583,7 +16583,14 @@
                     "type": "string"
                 },
                 "query": {
-                    "$ref": "#/definitions/HogQLQuery"
+                    "anyOf": [
+                        {
+                            "$ref": "#/definitions/HogQLQuery"
+                        },
+                        {
+                            "$ref": "#/definitions/InsightQueryNode"
+                        }
+                    ]
                 }
             },
             "type": "object"
@@ -16597,6 +16604,9 @@
                 },
                 "filters_override": {
                     "$ref": "#/definitions/DashboardFilter"
+                },
+                "query_override": {
+                    "type": "object"
                 },
                 "refresh": {
                     "$ref": "#/definitions/RefreshType",
@@ -25142,6 +25152,11 @@
                 },
                 "decimalPlaces": {
                     "type": "number"
+                },
+                "detailedResultsAggregationType": {
+                    "description": "detailed results table",
+                    "enum": ["total", "average", "median"],
+                    "type": "string"
                 },
                 "display": {
                     "$ref": "#/definitions/ChartDisplayType",

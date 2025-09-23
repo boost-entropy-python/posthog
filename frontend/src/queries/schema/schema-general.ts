@@ -343,7 +343,7 @@ export interface HogQLQueryModifiers {
     personsJoinMode?: 'inner' | 'left'
     bounceRatePageViewMode?: 'count_pageviews' | 'uniq_urls' | 'uniq_page_screen_autocaptures'
     bounceRateDurationSeconds?: number
-    sessionTableVersion?: 'auto' | 'v1' | 'v2'
+    sessionTableVersion?: 'auto' | 'v1' | 'v2' | 'v3'
     sessionsV2JoinMode?: 'string' | 'uuid'
     propertyGroupsMode?: 'enabled' | 'disabled' | 'optimized'
     useMaterializedViews?: boolean
@@ -1127,6 +1127,8 @@ export type TrendsFilter = {
     showTrendLines?: boolean
     showMovingAverage?: boolean
     movingAverageIntervals?: number
+    /** detailed results table */
+    detailedResultsAggregationType?: 'total' | 'average' | 'median'
 }
 
 export type CalendarHeatmapFilter = {
@@ -1521,7 +1523,7 @@ export type RefreshType =
 export interface NamedQueryRequest {
     name?: string
     description?: string
-    query?: HogQLQuery
+    query?: HogQLQuery | InsightQueryNode
     is_active?: boolean
 }
 
@@ -1545,6 +1547,7 @@ export interface NamedQueryRunRequest {
     filters_override?: DashboardFilter
     variables_override?: Record<string, Record<string, any>>
     variables_values?: Record<string, any>
+    query_override?: Record<string, any>
 }
 
 export interface QueryRequest {
