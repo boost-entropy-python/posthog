@@ -313,6 +313,7 @@ class AssistantTrendsDisplayType(RootModel[Union[str, Any]]):
 class Display(StrEnum):
     ACTIONS_LINE_GRAPH = "ActionsLineGraph"
     ACTIONS_BAR = "ActionsBar"
+    ACTIONS_UNSTACKED_BAR = "ActionsUnstackedBar"
     ACTIONS_AREA_GRAPH = "ActionsAreaGraph"
     ACTIONS_LINE_GRAPH_CUMULATIVE = "ActionsLineGraphCumulative"
     BOLD_NUMBER = "BoldNumber"
@@ -525,6 +526,7 @@ class ChartDisplayCategory(StrEnum):
 class ChartDisplayType(StrEnum):
     ACTIONS_LINE_GRAPH = "ActionsLineGraph"
     ACTIONS_BAR = "ActionsBar"
+    ACTIONS_UNSTACKED_BAR = "ActionsUnstackedBar"
     ACTIONS_STACKED_BAR = "ActionsStackedBar"
     ACTIONS_AREA_GRAPH = "ActionsAreaGraph"
     ACTIONS_LINE_GRAPH_CUMULATIVE = "ActionsLineGraphCumulative"
@@ -1355,6 +1357,7 @@ class FileSystemIconType(StrEnum):
     INSIGHT_STICKINESS = "insight/stickiness"
     INSIGHT_HOG = "insight/hog"
     TEAM_ACTIVITY = "team_activity"
+    HOME = "home"
 
 
 class FileSystemImport(BaseModel):
