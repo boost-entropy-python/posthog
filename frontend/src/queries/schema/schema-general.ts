@@ -2222,6 +2222,8 @@ export interface ErrorTrackingQuery extends DataNode<ErrorTrackingQueryResponse>
     limit?: integer
     offset?: integer
     personId?: string
+    groupKey?: string
+    groupTypeIndex?: integer
 }
 
 export interface ErrorTrackingSimilarIssuesQuery extends DataNode<ErrorTrackingSimilarIssuesQueryResponse> {
@@ -2285,6 +2287,11 @@ export interface ErrorTrackingExternalReference {
     integration: ErrorTrackingExternalReferenceIntegration
 }
 
+export interface ErrorTrackingIssueCohort {
+    id: number
+    name: string
+}
+
 export interface ErrorTrackingRelationalIssue {
     id: string
     name: string | null
@@ -2294,6 +2301,7 @@ export interface ErrorTrackingRelationalIssue {
     /**  @format date-time */
     first_seen: string
     external_issues?: ErrorTrackingExternalReference[]
+    cohort?: ErrorTrackingIssueCohort
 }
 
 export type ErrorTrackingIssue = ErrorTrackingRelationalIssue & {
@@ -3536,6 +3544,8 @@ export interface TracesQuery extends DataNode<TracesQueryResponse> {
     properties?: AnyPropertyFilter[]
     /** Person who performed the event */
     personId?: string
+    groupKey?: string
+    groupTypeIndex?: integer
 }
 
 export interface TraceQueryResponse extends AnalyticsQueryResponseBase {
