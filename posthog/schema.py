@@ -271,7 +271,6 @@ class AssistantTool(StrEnum):
     CREATE_HOG_FUNCTION_FILTERS = "create_hog_function_filters"
     CREATE_HOG_FUNCTION_INPUTS = "create_hog_function_inputs"
     CREATE_MESSAGE_TEMPLATE = "create_message_template"
-    NAVIGATE = "navigate"
     FILTER_ERROR_TRACKING_ISSUES = "filter_error_tracking_issues"
     FIND_ERROR_TRACKING_IMPACTFUL_ISSUE_EVENT_LIST = "find_error_tracking_impactful_issue_event_list"
     EXPERIMENT_RESULTS_SUMMARY = "experiment_results_summary"
@@ -11393,6 +11392,10 @@ class RecordingsQueryResponse(BaseModel):
         extra="forbid",
     )
     has_next: bool
+    next_cursor: Optional[str] = Field(
+        default=None,
+        description="Cursor for the next page. Contains the ordering value and session_id from the last record.",
+    )
     results: list[SessionRecordingType]
 
 
@@ -13086,6 +13089,13 @@ class RecordingsQuery(BaseModel):
         extra="forbid",
     )
     actions: Optional[list[dict[str, Any]]] = None
+    after: Optional[str] = Field(
+        default=None,
+        description=(
+            "Cursor for pagination. Contains the ordering value and session_id from the last record of the previous"
+            " page."
+        ),
+    )
     comment_text: Optional[RecordingPropertyFilter] = None
     console_log_filters: Optional[list[LogEntryPropertyFilter]] = None
     date_from: Optional[str] = "-3d"
