@@ -1462,6 +1462,8 @@ class FileSystemCount(BaseModel):
         extra="forbid",
     )
     count: float
+    entries: list[FileSystemEntry]
+    has_more: bool
 
 
 class Tag(StrEnum):
@@ -2844,6 +2846,14 @@ class SuggestedQuestionsQueryResponse(BaseModel):
         extra="forbid",
     )
     questions: list[str]
+
+
+class SuggestedTable(BaseModel):
+    model_config = ConfigDict(
+        extra="forbid",
+    )
+    table: str
+    tooltip: Optional[str] = None
 
 
 class SurveyAnalysisResponseItem(BaseModel):
@@ -4667,17 +4677,6 @@ class RevenueAnalyticsAssistantFilters(BaseModel):
     date_from: Optional[str] = None
     date_to: Optional[str] = None
     properties: list[RevenueAnalyticsPropertyFilter]
-
-
-class WebAnalyticsAssistantFilters(BaseModel):
-    model_config = ConfigDict(
-        extra="forbid",
-    )
-    compareFilter: Optional[CompareFilter] = None
-    date_from: Optional[str] = None
-    date_to: Optional[str] = None
-    doPathCleaning: Optional[bool] = None
-    properties: list[Union[EventPropertyFilter, PersonPropertyFilter, SessionPropertyFilter]]
 
 
 class RevenueAnalyticsEventItem(BaseModel):
@@ -12086,6 +12085,17 @@ class VectorSearchQueryResponse(BaseModel):
     )
 
 
+class WebAnalyticsAssistantFilters(BaseModel):
+    model_config = ConfigDict(
+        extra="forbid",
+    )
+    compareFilter: Optional[CompareFilter] = None
+    date_from: Optional[str] = None
+    date_to: Optional[str] = None
+    doPathCleaning: Optional[bool] = None
+    properties: list[Union[EventPropertyFilter, PersonPropertyFilter, SessionPropertyFilter]]
+
+
 class WebAnalyticsExternalSummaryQuery(BaseModel):
     model_config = ConfigDict(
         extra="forbid",
@@ -16437,6 +16447,9 @@ class SourceConfig(BaseModel):
     iconPath: str
     label: Optional[str] = None
     name: ExternalDataSourceType
+    suggestedTables: Optional[list[SuggestedTable]] = Field(
+        default=[], description="Tables to suggest enabling, with optional tooltip explaining why"
+    )
     unreleasedSource: Optional[bool] = None
 
 
