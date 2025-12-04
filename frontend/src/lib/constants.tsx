@@ -237,10 +237,9 @@ export const FEATURE_FLAGS = {
     ENDPOINTS: 'embedded-analytics', // owner: @sakce #team-clickhouse
     SUPPORT_FORM_IN_ONBOARDING: 'support-form-in-onboarding', // owner: @joshsny
     CRM_ITERATION_ONE: 'crm-iteration-one', // owner: @arthurdedeus #team-customer-analytics
-    CRM_USAGE_METRICS: 'crm-usage-metrics', // owner: @arthurdedeus #team-customer-analytics
     TOGGLE_PROPERTY_ARRAYS: 'toggle-property-arrays', // owner: @arthurdedeus #team-customer-analytics
     DWH_JOIN_TABLE_PREVIEW: 'dwh-join-table-preview', // owner: @arthurdedeus #team-customer-analytics
-    CUSTOMER_ANALYTICS: 'customer-analytics', // owner: @arthurdedeus #team-customer-analytics
+    CUSTOMER_ANALYTICS: 'customer-analytics-roadmap', // owner: @arthurdedeus #team-customer-analytics
     SETTINGS_SESSIONS_V2_JOIN: 'settings-sessions-v2-join', // owner: @robbie-c #team-web-analytics
     SESSIONS_EXPLORER: 'sessions-explorer', // owner: @jabahamondes #team-web-analytics
     SAVE_INSIGHT_TASK: 'save-insight-task', // owner: @joshsny
@@ -354,6 +353,7 @@ export const FEATURE_FLAGS = {
     SURVEYS_FF_CROSS_SELL: 'surveys-ff-cross-sell', // owner: @adboio #team-surveys
     WEB_ANALYTICS_EMPTY_ONBOARDING: 'web-analytics-empty-onboarding', // owner: @jordanm-posthog #team-web-analytics
     REPLAY_WAIT_FOR_FULL_SNAPSHOT_PLAYBACK: 'replay-wait-for-full-snapshot-playback', // owner: @ksvat #team-replay
+    SURVEYS_INSIGHT_BUTTON_EXPERIMENT: 'ask-users-why-ai-vs-quickcreate', // owner: @adboio #team-surveys multivariate
 } as const
 export type FeatureFlagLookupKey = keyof typeof FEATURE_FLAGS
 export type FeatureFlagKey = (typeof FEATURE_FLAGS)[keyof typeof FEATURE_FLAGS]
