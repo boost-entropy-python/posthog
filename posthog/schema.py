@@ -2447,7 +2447,6 @@ class PageURL(BaseModel):
     model_config = ConfigDict(
         extra="forbid",
     )
-    count: float
     url: str
 
 
@@ -3089,6 +3088,13 @@ class SimilarIssue(BaseModel):
 class SimpleIntervalType(StrEnum):
     DAY = "day"
     MONTH = "month"
+
+
+class SlashCommandName(StrEnum):
+    FIELD_INIT = "/init"
+    FIELD_REMEMBER = "/remember"
+    FIELD_USAGE = "/usage"
+    FIELD_FEEDBACK = "/feedback"
 
 
 class SourceFieldFileUploadJsonFormatConfig(BaseModel):

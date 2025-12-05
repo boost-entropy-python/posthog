@@ -291,6 +291,7 @@ export const FEATURE_FLAGS = {
     POSTHOG_AI_BILLING_USAGE_REPORT: 'posthog-ai-billing-usage-report', // owner: #team-posthog-ai
     POSTHOG_AI_CONVERSATION_FEEDBACK_CONFIG: 'posthog-ai-conversation-feedback-config', // owner: #team-posthog-ai
     POSTHOG_AI_CONVERSATION_FEEDBACK_LLMA_SESSIONS: 'posthog-ai-conversation-feedback-llma-sessions', // owner: #team-posthog-ai
+    POSTHOG_AI_FEEDBACK_COMMAND: 'posthog-ai-feedback-command', // owner: #team-posthog-ai
     POSTHOG_AI_GENERAL_AVAILABILITY: 'posthog-ai-general-availability', // owner: #team-posthog-ai
     QUERY_EXECUTION_DETAILS: 'query-execution-details', // owner: @sakce
     RECORDINGS_PLAYER_EVENT_PROPERTY_EXPANSION: 'recordings-player-event-property-expansion', // owner: @pauldambra #team-replay
@@ -330,6 +331,7 @@ export const FEATURE_FLAGS = {
     WORKFLOWS_SCHEDULED_TRIGGERS: 'workflows-scheduled-triggers', // owner: #team-workflows
     WORKFLOWS: 'messaging', // owner @haven #team-workflows
     AVERAGE_PAGE_VIEW_COLUMN: 'average-page-view-column', // owner: @jordanm-posthog #team-web-analytics
+    SURVEY_HEADLINE_SUMMARY: 'survey-headline-summary', // owner: @adboio #team-surveys
 } as const
 export type FeatureFlagLookupKey = keyof typeof FEATURE_FLAGS
 export type FeatureFlagKey = (typeof FEATURE_FLAGS)[keyof typeof FEATURE_FLAGS]
