@@ -819,6 +819,15 @@ export enum PropertyOperator {
     NotIn = 'not_in',
     IsCleanedPathExact = 'is_cleaned_path_exact',
     FlagEvaluatesTo = 'flag_evaluates_to',
+    SemverEq = 'semver_eq',
+    SemverNeq = 'semver_neq',
+    SemverGt = 'semver_gt',
+    SemverGte = 'semver_gte',
+    SemverLt = 'semver_lt',
+    SemverLte = 'semver_lte',
+    SemverTilde = 'semver_tilde',
+    SemverCaret = 'semver_caret',
+    SemverWildcard = 'semver_wildcard',
 }
 
 export enum SavedInsightsTabs {
@@ -3325,7 +3334,10 @@ export interface ProductTourStep {
     content: Record<string, any> | null
     /** Pre-rendered HTML content for SDK consumption. Built from `content` on tour save. */
     contentHtml?: string
+    /** Tooltip position relative to element - for element steps */
     position?: 'top' | 'bottom' | 'left' | 'right'
+    /** Modal position on screen - for modal/survey steps */
+    modalPosition?: ScreenPosition
     /** Inline survey question config - only for survey steps */
     survey?: ProductTourSurveyQuestion
     /** ID of the auto-created survey for this step (set by backend) */
@@ -3473,6 +3485,8 @@ export enum SurveyPosition {
     Right = 'right',
     NextToTrigger = 'next_to_trigger',
 }
+
+export type ScreenPosition = Exclude<SurveyPosition, SurveyPosition.NextToTrigger>
 
 export enum SurveyTabPosition {
     Top = 'top',
