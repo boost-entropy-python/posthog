@@ -38,10 +38,8 @@ from typing import Any
 
 from django.utils import timezone
 
-import boto3
 import duckdb
 import structlog
-from botocore.exceptions import ClientError
 from clickhouse_driver import Client
 from clickhouse_driver.errors import Error as ClickHouseError
 from dagster import (
@@ -109,10 +107,6 @@ EVENTS_COLUMNS = """
 
 BACKFILL_EVENTS_S3_PREFIX = "backfill/events"
 BACKFILL_PERSONS_S3_PREFIX = "backfill/persons"
-
-# Maximum partitions to create per sensor evaluation to avoid OOM/timeout
-# The sensor runs daily, so this limits how fast full backfills progress
-MAX_PARTITIONS_PER_FULL_BACKFILL_EVALUATION = 100
 
 EVENTS_CONCURRENCY_TAG = {
     "duckling_events_backfill_concurrency": "duckling_events_v1",
@@ -215,7 +209,6 @@ class DucklingBackfillConfig(Config):
     clickhouse_settings: dict[str, Any] | None = None
     skip_ducklake_registration: bool = False
     skip_schema_validation: bool = False
-    cleanup_prior_run_files: bool = True
     cleanup_existing_partition_data: bool = True  # Delete existing DuckLake data for partition before registering
     create_tables_if_missing: bool = True
     delete_tables: bool = False  # Danger: drops and recreates tables, losing all data
@@ -793,181 +786,6 @@ def validate_duckling_persons_schema(
         conn.close()
 
 
-def cleanup_prior_run_files(
-    context: AssetExecutionContext,
-    catalog: DuckLakeCatalog,
-    team_id: int,
-    partition_date: datetime,
-    current_run_id: str,
-    s3_prefix: str,
-) -> int:
-    """Clean up S3 files from prior failed runs for this partition.
-
-    This prevents orphaned files from accumulating when runs fail partway through.
-    Only deletes files that don't match the current run_id.
-
-    Uses cross-account role assumption to access the duckling's S3 bucket.
-
-    Args:
-        context: Dagster asset execution context.
-        catalog: The DuckLakeCatalog for this duckling.
-        team_id: Team ID for the partition.
-        partition_date: Date for the partition.
-        current_run_id: Current Dagster run ID (files with this ID are preserved).
-        s3_prefix: S3 prefix for the backfill (e.g., "backfill/events" or "backfill/persons").
-
-    Returns the number of files deleted.
-    """
-    destination = catalog.to_cross_account_destination()
-
-    # Assume the cross-account role to access the duckling's bucket
-    sts_client = boto3.client("sts")
-    assume_kwargs: dict[str, Any] = {
-        "RoleArn": destination.role_arn,
-        "RoleSessionName": "duckling-cleanup",
-        "DurationSeconds": 900,  # 15 minutes
-    }
-    if destination.external_id:
-        assume_kwargs["ExternalId"] = destination.external_id
-
-    response = sts_client.assume_role(**assume_kwargs)
-    credentials = response["Credentials"]
-
-    s3_client = boto3.client(
-        "s3",
-        region_name=destination.region or "us-east-1",
-        aws_access_key_id=credentials["AccessKeyId"],
-        aws_secret_access_key=credentials["SecretAccessKey"],
-        aws_session_token=credentials["SessionToken"],
-    )
-
-    year = partition_date.strftime("%Y")
-    month = partition_date.strftime("%m")
-    day = partition_date.strftime("%d")
-
-    # List objects under the backfill prefix for this team and date
-    prefix = f"{s3_prefix}/team_id={team_id}/year={year}/month={month}/day={day}/"
-
-    deleted_count = 0
-    paginator = s3_client.get_paginator("list_objects_v2")
-
-    for page in paginator.paginate(Bucket=catalog.bucket, Prefix=prefix):
-        for obj in page.get("Contents", []):
-            key = obj["Key"]
-            # Check if this file is not from our current run
-            if not key.endswith(f"/{current_run_id}.parquet"):
-                context.log.info(f"Deleting orphaned file: {key}")
-                logger.info("duckling_cleanup_orphaned_file", key=key, bucket=catalog.bucket, team_id=team_id)
-                try:
-                    s3_client.delete_object(Bucket=catalog.bucket, Key=key)
-                    deleted_count += 1
-                except ClientError as e:
-                    # Log and continue - don't fail the whole job for cleanup failures
-                    context.log.warning(f"Failed to delete orphaned file {key}: {e}")
-                    logger.warning(
-                        "duckling_cleanup_delete_failed",
-                        key=key,
-                        bucket=catalog.bucket,
-                        team_id=team_id,
-                        error=str(e),
-                    )
-
-    if deleted_count > 0:
-        context.log.info(f"Cleaned up {deleted_count} orphaned files from prior runs")
-        logger.info(
-            "duckling_cleanup_complete",
-            deleted_count=deleted_count,
-            team_id=team_id,
-            partition_date=partition_date.isoformat(),
-        )
-
-    return deleted_count
-
-
-def cleanup_full_export_files(
-    context: AssetExecutionContext,
-    catalog: DuckLakeCatalog,
-    team_id: int,
-    current_run_id: str,
-) -> int:
-    """Clean up S3 files from prior full export runs.
-
-    This prevents orphaned files from accumulating when runs fail partway through.
-    Only deletes files that don't match the current run_id.
-
-    Uses cross-account role assumption to access the duckling's S3 bucket.
-
-    Args:
-        context: Dagster asset execution context.
-        catalog: The DuckLakeCatalog for this duckling.
-        team_id: Team ID for the partition.
-        current_run_id: Current Dagster run ID (files with this ID are preserved).
-
-    Returns the number of files deleted.
-    """
-    destination = catalog.to_cross_account_destination()
-
-    # Assume the cross-account role to access the duckling's bucket
-    sts_client = boto3.client("sts")
-    assume_kwargs: dict[str, Any] = {
-        "RoleArn": destination.role_arn,
-        "RoleSessionName": "duckling-cleanup",
-        "DurationSeconds": 900,  # 15 minutes
-    }
-    if destination.external_id:
-        assume_kwargs["ExternalId"] = destination.external_id
-
-    response = sts_client.assume_role(**assume_kwargs)
-    credentials = response["Credentials"]
-
-    s3_client = boto3.client(
-        "s3",
-        region_name=destination.region or "us-east-1",
-        aws_access_key_id=credentials["AccessKeyId"],
-        aws_secret_access_key=credentials["SecretAccessKey"],
-        aws_session_token=credentials["SessionToken"],
-    )
-
-    # List objects under the full export prefix for this team
-    prefix = f"{BACKFILL_PERSONS_S3_PREFIX}/team_id={team_id}/full/"
-
-    deleted_count = 0
-    paginator = s3_client.get_paginator("list_objects_v2")
-
-    for page in paginator.paginate(Bucket=catalog.bucket, Prefix=prefix):
-        for obj in page.get("Contents", []):
-            key = obj["Key"]
-            # Check if this file is not from our current run
-            if not key.endswith(f"/{current_run_id}.parquet"):
-                context.log.info(f"Deleting orphaned full export file: {key}")
-                logger.info(
-                    "duckling_cleanup_orphaned_full_export_file", key=key, bucket=catalog.bucket, team_id=team_id
-                )
-                try:
-                    s3_client.delete_object(Bucket=catalog.bucket, Key=key)
-                    deleted_count += 1
-                except ClientError as e:
-                    # Log and continue - don't fail the whole job for cleanup failures
-                    context.log.warning(f"Failed to delete orphaned file {key}: {e}")
-                    logger.warning(
-                        "duckling_cleanup_full_export_delete_failed",
-                        key=key,
-                        bucket=catalog.bucket,
-                        team_id=team_id,
-                        error=str(e),
-                    )
-
-    if deleted_count > 0:
-        context.log.info(f"Cleaned up {deleted_count} orphaned full export files from prior runs")
-        logger.info(
-            "duckling_cleanup_full_export_complete",
-            deleted_count=deleted_count,
-            team_id=team_id,
-        )
-
-    return deleted_count
-
-
 @retry(
     stop=stop_after_attempt(MAX_RETRY_ATTEMPTS),
     wait=wait_exponential(multiplier=1, min=4, max=60),
@@ -1506,7 +1324,7 @@ def duckling_events_backfill(context: AssetExecutionContext, config: DucklingBac
     3. Creates the events table if it doesn't exist (optional, enabled by default)
     4. Validates the duckling's schema compatibility (optional)
     5. For each date in the partition:
-       a. Cleans up orphaned files from prior failed runs (optional)
+       a. Deletes existing DuckLake data for this partition (idempotent re-processing)
        b. Exports events to the duckling's S3 bucket (ClickHouse EC2 role has bucket access)
        c. Registers the Parquet file with the duckling's DuckLake catalog (via cross-account role)
     """
@@ -1562,10 +1380,6 @@ def duckling_events_backfill(context: AssetExecutionContext, config: DucklingBac
     for partition_date in dates:
         date_str = partition_date.strftime("%Y-%m-%d")
         context.log.info(f"Processing date {date_str}...")
-
-        # Clean up orphaned files from prior failed runs
-        if config.cleanup_prior_run_files and not config.dry_run:
-            cleanup_prior_run_files(context, catalog, team_id, partition_date, run_id, BACKFILL_EVENTS_S3_PREFIX)
 
         # Delete existing DuckLake data for this partition before re-processing
         if config.cleanup_existing_partition_data and not config.dry_run and not config.skip_ducklake_registration:
@@ -1698,9 +1512,6 @@ def duckling_persons_backfill(context: AssetExecutionContext, config: DucklingBa
         # FULL EXPORT MODE - single query for all persons
         context.log.info(f"Full export mode: exporting all persons for team_id={team_id}")
 
-        if config.cleanup_prior_run_files and not config.dry_run:
-            cleanup_full_export_files(context, catalog, team_id, run_id)
-
         # Delete all existing persons data for this team before full re-export
         if config.cleanup_existing_partition_data and not config.dry_run and not config.skip_ducklake_registration:
             delete_persons_partition_data(context, catalog, team_id, partition_date=None)
@@ -1759,9 +1570,6 @@ def duckling_persons_backfill(context: AssetExecutionContext, config: DucklingBa
         for partition_date in dates:
             date_str = partition_date.strftime("%Y-%m-%d")
             context.log.info(f"Processing persons for date {date_str}...")
-
-            if config.cleanup_prior_run_files and not config.dry_run:
-                cleanup_prior_run_files(context, catalog, team_id, partition_date, run_id, BACKFILL_PERSONS_S3_PREFIX)
 
             # Delete existing DuckLake data for this partition before re-processing
             if config.cleanup_existing_partition_data and not config.dry_run and not config.skip_ducklake_registration:
@@ -1986,6 +1794,7 @@ def duckling_full_backfill_sensor(context: SensorEvaluationContext) -> SensorRes
 
     new_partitions: list[str] = []
     run_requests: list[RunRequest] = []
+    existing_partitions = set(context.instance.get_dynamic_partitions("duckling_events_backfill"))
 
     # Process catalogs starting from where we left off
     for catalog_idx, catalog in enumerate(catalogs[start_idx:], start=start_idx):
@@ -2017,14 +1826,18 @@ def duckling_full_backfill_sensor(context: SensorEvaluationContext) -> SensorRes
                 break
 
             partition_key = f"{team_id}_{month}"
+            current_month = month
+
+            # Skip partitions that already exist — advance cursor past them
+            if partition_key in existing_partitions:
+                continue
+
             new_partitions.append(partition_key)
             run_requests.append(
                 RunRequest(
                     partition_key=partition_key,
-                    run_key=f"{partition_key}_full_backfill",
                 )
             )
-            current_month = month
 
         # Update cursor for next tick
         # Move to next month after the last one we processed
@@ -2214,7 +2027,6 @@ def duckling_persons_full_backfill_sensor(context: SensorEvaluationContext) -> S
             run_requests.append(
                 RunRequest(
                     partition_key=partition_key,
-                    run_key=f"{partition_key}_persons_full_backfill",
                 )
             )
             context.log.info(f"Creating full persons backfill partition for team_id={team_id}")
