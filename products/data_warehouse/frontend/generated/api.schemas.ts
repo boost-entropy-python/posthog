@@ -55,19 +55,19 @@ export interface PatchedDataWarehouseSavedQueryDraftApi {
 }
 
 /**
- * * `Running` - Running
+ * * `Cancelled` - Cancelled
  * `Completed` - Completed
  * `Failed` - Failed
- * `Cancelled` - Cancelled
+ * `Running` - Running
  */
 export type DataModelingJobStatusEnumApi =
     (typeof DataModelingJobStatusEnumApi)[keyof typeof DataModelingJobStatusEnumApi]
 
 export const DataModelingJobStatusEnumApi = {
-    Running: 'Running',
+    Cancelled: 'Cancelled',
     Completed: 'Completed',
     Failed: 'Failed',
-    Cancelled: 'Cancelled',
+    Running: 'Running',
 } as const
 
 export interface DataModelingJobApi {
