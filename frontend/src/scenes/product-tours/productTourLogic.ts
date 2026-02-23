@@ -187,9 +187,9 @@ export const productTourLogic = kea<productTourLogicType>([
         launchProductTour: true,
         stopProductTour: true,
         resumeProductTour: true,
-        publishDraft: true,
         discardDraft: true,
         draftAutoSave: true,
+        setDraftSaveStatus: (status: 'unsaved' | 'saving' | 'saved' | null) => ({ status }),
         setDraftActionInProgress: (action: 'publish' | 'discard' | null) => ({ action }),
         openToolbarModal: (toolbarMode?: 'preview' | 'edit') => ({ toolbarMode: toolbarMode ?? 'edit' }),
         closeToolbarModal: true,
@@ -320,7 +320,7 @@ export const productTourLogic = kea<productTourLogicType>([
             },
         },
     })),
-    forms(({ props }) => ({
+    forms(({ values, actions }) => ({
         productTourForm: {
             defaults: NEW_PRODUCT_TOUR as ProductTourForm,
             alwaysShowErrors: true,
@@ -390,9 +390,14 @@ export const productTourLogic = kea<productTourLogicType>([
                 return errors
             },
             submit: async (formValues: ProductTourForm) => {
-                if (props.id && props.id !== 'new') {
-                    await api.productTours.saveDraft(props.id, buildDraftPayload(formValues))
+                if (!values.productTour) {
+                    return
                 }
+                await api.productTours.publishDraft(values.productTour.id, buildDraftPayload(formValues))
+                lemonToast.success('Product tour saved')
+                actions.editingProductTour(false)
+                actions.loadProductTour()
+                actions.loadProductTours()
             },
         },
     })),
@@ -451,9 +456,7 @@ export const productTourLogic = kea<productTourLogicType>([
             null as 'unsaved' | 'saving' | 'saved' | null,
             {
                 draftAutoSave: () => 'unsaved' as const,
-                submitProductTourForm: () => 'saving' as const,
-                submitProductTourFormSuccess: () => 'saved' as const,
-                submitProductTourFormFailure: () => null,
+                setDraftSaveStatus: (_, { status }) => status,
                 editingProductTour: () => null,
             },
         ],
@@ -482,23 +485,6 @@ export const productTourLogic = kea<productTourLogicType>([
             const formErrors = values.productTourFormAllErrors
             const errorMessage = apiDetail || formErrors._form || formErrors.name || 'Failed to save product tour'
             lemonToast.error(errorMessage)
-        },
-        publishDraft: async () => {
-            if (!values.productTour) {
-                return
-            }
-            actions.setDraftActionInProgress('publish')
-            try {
-                await api.productTours.publishDraft(values.productTour.id, buildDraftPayload(values.productTourForm))
-                lemonToast.success('Product tour saved')
-                actions.editingProductTour(false)
-                actions.loadProductTour()
-                actions.loadProductTours()
-            } catch (e: any) {
-                lemonToast.error(e.detail || 'Failed to save product tour')
-            } finally {
-                actions.setDraftActionInProgress(null)
-            }
         },
         discardDraft: async () => {
             if (!values.productTour) {
@@ -591,8 +577,14 @@ export const productTourLogic = kea<productTourLogicType>([
         },
         draftAutoSave: async (_, breakpoint) => {
             await breakpoint(1000)
-            if (values.isEditingProductTour && values.productTourForm.name) {
-                actions.submitProductTourForm()
+            if (values.isEditingProductTour && values.productTourForm.name && props.id && props.id !== 'new') {
+                actions.setDraftSaveStatus('saving')
+                try {
+                    await api.productTours.saveDraft(props.id, buildDraftPayload(values.productTourForm))
+                    actions.setDraftSaveStatus('saved')
+                } finally {
+                    actions.setDraftActionInProgress(null)
+                }
             }
         },
         setDateRange: () => {
