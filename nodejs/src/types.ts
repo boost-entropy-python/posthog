@@ -540,22 +540,18 @@ export interface PluginsServerConfig
     CLICKHOUSE_DATABASE: string
 }
 
-export interface Hub extends PluginsServerConfig {
-    // what tasks this server will tackle - e.g. ingestion, scheduled plugins or others.
+export interface HubServices {
     postgres: PostgresRouter
     redisPool: GenericPool<Redis>
     posthogRedisPool: GenericPool<Redis>
     cookielessRedisPool: GenericPool<Redis>
     kafkaProducer: KafkaProducerWrapper
-    // tools
     teamManager: TeamManager
     groupTypeManager: GroupTypeManager
     groupRepository: GroupRepository
     clickhouseGroupRepository: ClickhouseGroupRepository
     personRepository: PersonRepository
-    // geoip database, setup in workers
     geoipService: GeoIPService
-    // lookups
     encryptedFields: EncryptedFields
     cookielessManager: CookielessManager
     pubSub: PubSub
@@ -564,6 +560,8 @@ export interface Hub extends PluginsServerConfig {
     internalCaptureService: InternalCaptureService
     internalFetchService: InternalFetchService
 }
+
+export interface Hub extends PluginsServerConfig, HubServices {}
 
 export interface PluginServerCapabilities {
     // Warning: when adding more entries, make sure to update worker/vm/capabilities.ts
