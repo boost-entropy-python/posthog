@@ -485,7 +485,11 @@ export const createExperimentLogic = kea<createExperimentLogicType>([
                         lemonToast.success('Experiment updated successfully!')
                     } else {
                         // Create flow
-                        actions.reportExperimentCreated(response)
+                        const isWizard = !!values.featureFlags[FEATURE_FLAGS.EXPERIMENTS_WIZARD_CREATION_FORM]
+                        actions.reportExperimentCreated(response, {
+                            creation_source: isWizard ? 'wizard' : 'classic_form',
+                            has_linked_flag: !!response.feature_flag?.id,
+                        })
                         actions.addProductIntent({
                             product_type: ProductKey.EXPERIMENTS,
                             intent_context: ProductIntentContext.EXPERIMENT_CREATED,
