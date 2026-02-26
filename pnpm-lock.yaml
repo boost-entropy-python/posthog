@@ -2898,6 +2898,24 @@ importers:
         specifier: ^3.24.6
         version: 3.25.0(zod@3.25.76)
 
+  services/oauth-proxy:
+    devDependencies:
+      '@cloudflare/workers-types':
+        specifier: ^4.20260120.0
+        version: 4.20260207.0
+      typescript:
+        specifier: 5.4.5
+        version: 5.4.5
+      vite-tsconfig-paths:
+        specifier: ^5.1.4
+        version: 5.1.4(typescript@5.4.5)(vite@7.1.9(@types/node@22.18.8)(jiti@2.6.1)(less@4.2.2)(lightningcss@1.29.2)(sass-embedded@1.70.0)(terser@5.19.1)(tsx@4.20.5)(yaml@2.8.2))
+      vitest:
+        specifier: ^3.2.4
+        version: 3.2.4(@types/node@22.18.8)(happy-dom@20.0.11)(jiti@2.6.1)(jsdom@20.0.3)(less@4.2.2)(lightningcss@1.29.2)(sass-embedded@1.70.0)(terser@5.19.1)(tsx@4.20.5)(yaml@2.8.2)
+      wrangler:
+        specifier: ^4.59.0
+        version: 4.60.0(@cloudflare/workers-types@4.20260207.0)
+
 packages:
 
   '@aashutoshrathi/word-wrap@1.2.6':
@@ -30444,7 +30462,7 @@ snapshots:
       case-sensitive-paths-webpack-plugin: 2.4.0
       constants-browserify: 1.0.0
       css-loader: 6.8.1(webpack@5.88.2)
-      es-module-lexer: 1.4.1
+      es-module-lexer: 1.7.0
       express: 4.18.2
       fork-ts-checker-webpack-plugin: 8.0.0(typescript@5.4.5)(webpack@5.88.2)
       fs-extra: 11.1.1
@@ -30452,7 +30470,7 @@ snapshots:
       magic-string: 0.30.19
       path-browserify: 1.0.1
       process: 0.11.10
-      semver: 7.7.2
+      semver: 7.7.3
       style-loader: 3.3.3(webpack@5.88.2)
       swc-loader: 0.2.3(@swc/core@1.11.4(@swc/helpers@0.5.15))(webpack@5.88.2)
       terser-webpack-plugin: 5.3.9(@swc/core@1.11.4(@swc/helpers@0.5.15))(esbuild@0.18.20)(webpack@5.88.2)
@@ -30798,7 +30816,7 @@ snapshots:
       react-docgen: 7.0.1
       react-dom: 18.3.1(react@18.3.1)
       react-refresh: 0.14.0
-      semver: 7.7.2
+      semver: 7.7.3
       webpack: 5.88.2(@swc/core@1.11.4(@swc/helpers@0.5.15))(esbuild@0.18.20)(webpack-cli@5.1.4)
     optionalDependencies:
       '@babel/core': 7.26.0
@@ -31989,7 +32007,7 @@ snapshots:
   '@types/eslint-scope@3.7.4':
     dependencies:
       '@types/eslint': 8.44.0
-      '@types/estree': 1.0.1
+      '@types/estree': 1.0.8
 
   '@types/eslint@8.44.0':
     dependencies:
@@ -44431,6 +44449,17 @@ snapshots:
       tsconfck: 3.1.6(typescript@5.4.5)
     optionalDependencies:
       vite: 5.4.21(@types/node@22.18.8)(less@4.2.2)(lightningcss@1.29.2)(sass-embedded@1.70.0)(terser@5.19.1)
+    transitivePeerDependencies:
+      - supports-color
+      - typescript
+
+  vite-tsconfig-paths@5.1.4(typescript@5.4.5)(vite@7.1.9(@types/node@22.18.8)(jiti@2.6.1)(less@4.2.2)(lightningcss@1.29.2)(sass-embedded@1.70.0)(terser@5.19.1)(tsx@4.20.5)(yaml@2.8.2)):
+    dependencies:
+      debug: 4.4.3
+      globrex: 0.1.2
+      tsconfck: 3.1.6(typescript@5.4.5)
+    optionalDependencies:
+      vite: 7.1.9(@types/node@22.18.8)(jiti@2.6.1)(less@4.2.2)(lightningcss@1.29.2)(sass-embedded@1.70.0)(terser@5.19.1)(tsx@4.20.5)(yaml@2.8.2)
     transitivePeerDependencies:
       - supports-color
       - typescript

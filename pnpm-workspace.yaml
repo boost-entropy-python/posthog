@@ -11,6 +11,7 @@ packages:
     - nodejs/src/scripts
     - products/*
     - docs/onboarding
+    - services/oauth-proxy
     - services/mcp
     - rust/cyclotron-node
 
