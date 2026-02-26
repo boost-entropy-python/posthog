@@ -169,7 +169,6 @@ export const FEATURE_FLAGS = {
 
     // UX flags, used to control the UX of the app
     AI_FIRST: 'ai-first', // this a larger change, not released to team yet
-    UX_REMOVE_SIDEPANEL: 'ux-remove-sidepanel', // used to remove the sidepanel from the experience
     SEARCH_AI_PREVIEW: 'search-ai-preview', // used to show AI preview on search when no results are found
 
     // Feature flags used to control opt-in for different behaviors, should not be removed
@@ -433,7 +432,7 @@ export type FeatureFlagLookupKey = keyof typeof FEATURE_FLAGS
 export type FeatureFlagKey = (typeof FEATURE_FLAGS)[keyof typeof FEATURE_FLAGS]
 
 export const STORYBOOK_FEATURE_FLAGS = Object.values(FEATURE_FLAGS).filter(
-    (flag) => flag !== FEATURE_FLAGS.AI_ONLY_MODE && flag !== FEATURE_FLAGS.UX_REMOVE_SIDEPANEL
+    (flag) => flag !== FEATURE_FLAGS.AI_ONLY_MODE
 )
 
 export const INSIGHT_VISUAL_ORDER = {
