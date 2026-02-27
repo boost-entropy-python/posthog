@@ -366,7 +366,8 @@
                 "survey",
                 "onboarding",
                 "research",
-                "flags"
+                "flags",
+                "llm_analytics"
             ],
             "type": "string"
         },
@@ -2000,7 +2001,8 @@
                 "list_data",
                 "upsert_alert",
                 "finalize_plan",
-                "recommend_products"
+                "recommend_products",
+                "search_llm_traces"
             ],
             "type": "string"
         },
