@@ -434,6 +434,7 @@ export function LineGraph_({
                           colorMax: mainColor,
                           lineStyle: 'dotted',
                           width: 2,
+                          trendoffset: incompletenessOffsetFromEnd,
                       },
                   }
                 : {}),
@@ -1107,6 +1108,7 @@ export function LineGraph_({
             isArea,
             showTrendLines,
             labels,
+            legend?.display,
             hideTooltip,
             showTooltip,
             getTooltip,
