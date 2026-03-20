@@ -8545,6 +8545,7 @@ export namespace Schemas {
       Salesforce: 'salesforce',
       Hubspot: 'hubspot',
       GooglePubsub: 'google-pubsub',
+      GoogleCloudServiceAccount: 'google-cloud-service-account',
       GoogleCloudStorage: 'google-cloud-storage',
       GoogleAds: 'google-ads',
       GoogleSheets: 'google-sheets',
@@ -8989,6 +8990,7 @@ export namespace Schemas {
       MaxAiContext: 'max_ai_context',
       WorkflowVariables: 'workflow_variables',
       SuggestedFilters: 'suggested_filters',
+      RecentFilters: 'recent_filters',
       Empty: 'empty',
     } as const;
 
@@ -12110,9 +12112,21 @@ export namespace Schemas {
        * @maxLength 200
        */
       name: string;
+      /** A longer description of what this early access feature does, shown to users in the opt-in UI. */
       description?: string;
+      /** Lifecycle stage. Valid values: draft, concept, alpha, beta, general-availability, archived. Moving to an active stage (alpha/beta/general-availability) enables the feature flag for opted-in users.
+
+    * `draft` - draft
+    * `concept` - concept
+    * `alpha` - alpha
+    * `beta` - beta
+    * `general-availability` - general availability
+    * `archived` - archived */
       stage: StageEnum;
-      /** @maxLength 800 */
+      /**
+       * URL to external documentation for this feature. Shown to users in the opt-in UI.
+       * @maxLength 800
+       */
       documentation_url?: string;
       /** Feature flag payload for this early access feature */
       readonly payload: EarlyAccessFeaturePayload;
@@ -12126,12 +12140,26 @@ export namespace Schemas {
        * @maxLength 200
        */
       name: string;
+      /** A longer description of what this early access feature does, shown to users in the opt-in UI. */
       description?: string;
+      /** Lifecycle stage. Valid values: draft, concept, alpha, beta, general-availability, archived. Moving to an active stage (alpha/beta/general-availability) enables the feature flag for opted-in users.
+
+    * `draft` - draft
+    * `concept` - concept
+    * `alpha` - alpha
+    * `beta` - beta
+    * `general-availability` - general availability
+    * `archived` - archived */
       stage: StageEnum;
-      /** @maxLength 800 */
+      /**
+       * URL to external documentation for this feature. Shown to users in the opt-in UI.
+       * @maxLength 800
+       */
       documentation_url?: string;
+      /** Arbitrary JSON metadata associated with this feature. */
       payload?: unknown;
       readonly created_at: string;
+      /** Optional ID of an existing feature flag to link. If omitted, a new flag is auto-created from the feature name. The flag must not already be linked to another feature, must not be group-based, and must not be multivariate. */
       feature_flag_id?: number;
       readonly feature_flag: MinimalFeatureFlag;
       _create_in_folder?: string;
@@ -16451,6 +16479,7 @@ export namespace Schemas {
     * `google-cloud-storage` - Google Cloud Storage
     * `google-ads` - Google Ads
     * `google-sheets` - Google Sheets
+    * `google-cloud-service-account` - Google Cloud Service Account
     * `snapchat` - Snapchat
     * `linkedin-ads` - Linkedin Ads
     * `reddit-ads` - Reddit Ads
@@ -16471,10 +16500,10 @@ export namespace Schemas {
     * `jira` - Jira
     * `pinterest-ads` - Pinterest Ads
      */
-    export type KindBfbEnum = typeof KindBfbEnum[keyof typeof KindBfbEnum];
+    export type Kind8d6Enum = typeof Kind8d6Enum[keyof typeof Kind8d6Enum];
 
 
-    export const KindBfbEnum = {
+    export const Kind8d6Enum = {
       Slack: 'slack',
       SlackPosthogCode: 'slack-posthog-code',
       Salesforce: 'salesforce',
@@ -16483,6 +16512,7 @@ export namespace Schemas {
       GoogleCloudStorage: 'google-cloud-storage',
       GoogleAds: 'google-ads',
       GoogleSheets: 'google-sheets',
+      GoogleCloudServiceAccount: 'google-cloud-service-account',
       Snapchat: 'snapchat',
       LinkedinAds: 'linkedin-ads',
       RedditAds: 'reddit-ads',
@@ -16509,7 +16539,7 @@ export namespace Schemas {
      */
     export interface Integration {
       readonly id: number;
-      kind: KindBfbEnum;
+      kind: Kind8d6Enum;
       config?: unknown;
       readonly created_at: string;
       readonly created_by: UserBasic;
@@ -16603,6 +16633,8 @@ export namespace Schemas {
        * @nullable
        */
       external_references?: SessionRecordingExternalReference[] | null;
+      /** @nullable */
+      has_summary?: boolean | null;
       id: string;
       /** @nullable */
       inactive_seconds?: number | null;
@@ -19427,6 +19459,7 @@ export namespace Schemas {
       readonly ongoing: boolean;
       /** @nullable */
       readonly activity_score: number | null;
+      readonly has_summary: boolean;
       /** Load external references (linked issues) for this recording */
       readonly external_references: readonly SessionRecordingExternalReferencesItem[];
     }
@@ -21358,9 +21391,21 @@ export namespace Schemas {
        * @maxLength 200
        */
       name?: string;
+      /** A longer description of what this early access feature does, shown to users in the opt-in UI. */
       description?: string;
+      /** Lifecycle stage. Valid values: draft, concept, alpha, beta, general-availability, archived. Moving to an active stage (alpha/beta/general-availability) enables the feature flag for opted-in users.
+
+    * `draft` - draft
+    * `concept` - concept
+    * `alpha` - alpha
+    * `beta` - beta
+    * `general-availability` - general availability
+    * `archived` - archived */
       stage?: StageEnum;
-      /** @maxLength 800 */
+      /**
+       * URL to external documentation for this feature. Shown to users in the opt-in UI.
+       * @maxLength 800
+       */
       documentation_url?: string;
       /** Feature flag payload for this early access feature */
       readonly payload?: PatchedEarlyAccessFeaturePayload;
@@ -22224,7 +22269,7 @@ export namespace Schemas {
      */
     export interface PatchedIntegration {
       readonly id?: number;
-      kind?: KindBfbEnum;
+      kind?: Kind8d6Enum;
       config?: unknown;
       readonly created_at?: string;
       readonly created_by?: UserBasic;
@@ -22994,6 +23039,7 @@ export namespace Schemas {
       readonly ongoing?: boolean;
       /** @nullable */
       readonly activity_score?: number | null;
+      readonly has_summary?: boolean;
       /** Load external references (linked issues) for this recording */
       readonly external_references?: readonly PatchedSessionRecordingExternalReferencesItem[];
     }
@@ -23008,7 +23054,7 @@ export namespace Schemas {
      */
     export interface SessionRecordingExternalReferenceIntegration {
       readonly id: number;
-      readonly kind: KindBfbEnum;
+      readonly kind: Kind8d6Enum;
       readonly display_name: string;
     }
 

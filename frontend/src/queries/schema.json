@@ -19168,6 +19168,7 @@
                 "salesforce",
                 "hubspot",
                 "google-pubsub",
+                "google-cloud-service-account",
                 "google-cloud-storage",
                 "google-ads",
                 "google-sheets",
@@ -31654,6 +31655,9 @@
                     },
                     "type": "array"
                 },
+                "has_summary": {
+                    "type": "boolean"
+                },
                 "id": {
                     "type": "string"
                 },
@@ -33400,6 +33404,7 @@
                 "max_ai_context",
                 "workflow_variables",
                 "suggested_filters",
+                "recent_filters",
                 "empty"
             ],
             "type": "string"
