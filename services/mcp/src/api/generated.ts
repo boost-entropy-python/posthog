@@ -9255,6 +9255,7 @@ export namespace Schemas {
       WorkflowVariables: 'workflow_variables',
       SuggestedFilters: 'suggested_filters',
       RecentFilters: 'recent_filters',
+      PinnedFilters: 'pinned_filters',
       Empty: 'empty',
     } as const;
 
@@ -18299,6 +18300,13 @@ export namespace Schemas {
       new_name: string;
     }
 
+    export interface LLMPromptEditOperation {
+      /** Text to find in the current prompt. Must match exactly once. */
+      old: string;
+      /** Replacement text. */
+      new: string;
+    }
+
     export interface LLMPromptPublic {
       id: string;
       name: string;
@@ -23689,8 +23697,10 @@ export namespace Schemas {
     }
 
     export interface PatchedLLMPromptPublish {
-      /** Prompt payload to publish as a new version. */
+      /** Full prompt payload to publish as a new version. Mutually exclusive with edits. */
       prompt?: unknown;
+      /** List of find/replace operations to apply to the current prompt version. Each edit's 'old' text must match exactly once. Edits are applied sequentially. Mutually exclusive with prompt. */
+      edits?: LLMPromptEditOperation[];
       /**
        * Latest version you are editing from. Used for optimistic concurrency checks.
        * @minimum 1
