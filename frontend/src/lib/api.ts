@@ -100,6 +100,7 @@ import {
     DataWarehouseSavedQueryDraft,
     DataWarehouseSavedQueryFolder,
     DataWarehouseSavedQueryRunHistory,
+    DataWarehouseProvisioningStatus,
     DataWarehouseSourceRowCount,
     DataWarehouseTable,
     DataWarehouseViewLink,
@@ -741,6 +742,10 @@ export class ApiRequest {
 
     public logsSparkline(projectId?: ProjectType['id']): ApiRequest {
         return this.logs(projectId).addPathComponent('sparkline')
+    }
+
+    public logsServices(projectId?: ProjectType['id']): ApiRequest {
+        return this.logs(projectId).addPathComponent('services')
     }
 
     public logsHasLogs(projectId?: ProjectType['id']): ApiRequest {
@@ -2568,6 +2573,17 @@ const api = {
         },
         async sparkline({ query, signal }: { query: Omit<LogsQuery, 'kind'>; signal?: AbortSignal }): Promise<any[]> {
             return new ApiRequest().logsSparkline().create({ signal, data: { query } })
+        },
+        async services({ query, signal }: { query: Omit<LogsQuery, 'kind'>; signal?: AbortSignal }): Promise<{
+            services: {
+                service_name: string
+                log_count: number
+                error_count: number
+                error_rate: number
+            }[]
+            sparkline: { time: string; service_name: string; count: number }[]
+        }> {
+            return new ApiRequest().logsServices().create({ signal, data: { query } })
         },
         async hasLogs(): Promise<boolean> {
             return new ApiRequest()
@@ -5024,6 +5040,42 @@ const api = {
 
         async dataOpsDashboard(options?: ApiMethodOptions): Promise<{ dashboard_id: number }> {
             return await new ApiRequest().dataWarehouse().withAction('data_ops_dashboard').get(options)
+        },
+
+        async provisionWarehouse(
+            databaseName: string,
+            options?: ApiMethodOptions
+        ): Promise<{ status: string; org: string; username: string; password: string }> {
+            return await new ApiRequest()
+                .dataWarehouse()
+                .withAction('provision')
+                .create({ data: { database_name: databaseName }, ...options } as any)
+        },
+
+        async deprovisionWarehouse(options?: ApiMethodOptions): Promise<{ status: string; org: string }> {
+            return await new ApiRequest()
+                .dataWarehouse()
+                .withAction('deprovision')
+                .create(options as any)
+        },
+
+        async warehouseStatus(options?: ApiMethodOptions): Promise<DataWarehouseProvisioningStatus> {
+            return await new ApiRequest().dataWarehouse().withAction('warehouse_status').get(options)
+        },
+
+        async checkDatabaseName(name: string): Promise<{ name: string; available: boolean }> {
+            return await new ApiRequest()
+                .dataWarehouse()
+                .withAction('check-database-name')
+                .withQueryString({ name })
+                .get()
+        },
+
+        async resetPassword(): Promise<{ username: string; password: string }> {
+            return await new ApiRequest()
+                .dataWarehouse()
+                .withAction('reset_password')
+                .create({} as any)
         },
     },
 
