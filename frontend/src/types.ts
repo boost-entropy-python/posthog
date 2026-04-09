@@ -1098,6 +1098,11 @@ export interface HogQLPropertyFilter extends BasePropertyFilter {
     key: string
 }
 
+export interface WorkflowVariablePropertyFilter extends BasePropertyFilter {
+    type: PropertyFilterType.WorkflowVariable
+    operator: PropertyOperator
+}
+
 export interface EmptyPropertyFilter {
     type?: PropertyFilterType.Empty
     value?: never
@@ -1125,6 +1130,7 @@ export type AnyPropertyFilter =
     | LogPropertyFilter
     | SpanPropertyFilter
     | RevenueAnalyticsPropertyFilter
+    | WorkflowVariablePropertyFilter
 
 /** Any filter type supported by `property_to_expr(scope="person", ...)`. */
 export type AnyPersonScopeFilter =
@@ -1566,7 +1572,7 @@ export interface CohortCriteriaType {
     seq_time_value?: number | string | null
     seq_time_interval?: TimeUnitType | null
     negation?: boolean
-    value_property?: string | null // Transformed into 'value' for api calls
+    value_property?: PropertyFilterValue // Transformed into 'value' for api calls
     event_filters?: AnyPropertyFilter[] | null
     sort_key?: string // Client-side only stable id for sorting.
 }
@@ -2363,7 +2369,7 @@ export interface EndpointVersionMaterializationType {
     status?: string
     error?: string
     last_materialized_at?: string
-    sync_frequency?: DataWarehouseSyncInterval
+    sync_frequency?: DataModelingSyncInterval
 }
 
 export interface DashboardBasicType extends WithAccessControl {
@@ -4907,6 +4913,8 @@ export interface SubscriptionType {
     id: number
     insight?: number
     dashboard?: number
+    insight_short_id?: string | null
+    resource_name?: string | null
     dashboard_export_insights?: number[]
     integration_id?: number | null
     target_type: string
@@ -4922,7 +4930,6 @@ export interface SubscriptionType {
     next_delivery_date: string | null
     created_by?: UserBasicType | null
     created_at: string
-    updated_at: string
     deleted?: boolean
 }
 
@@ -5468,7 +5475,7 @@ export interface DataModelingNode {
     user_tag?: string
     last_run_at?: string
     last_run_status?: DataModelingJobStatus
-    sync_interval?: DataWarehouseSyncInterval
+    sync_interval?: DataModelingSyncInterval
 }
 
 export interface DataModelingEdge {
@@ -5663,6 +5670,7 @@ export interface SimpleExternalDataSourceSchema {
     label: string | null
     should_sync: boolean
     last_synced_at?: Dayjs
+    sync_type?: 'full_refresh' | 'incremental' | 'append' | 'webhook' | 'cdc' | null
 }
 
 export type SchemaIncrementalFieldsResponse = {
@@ -5671,6 +5679,7 @@ export type SchemaIncrementalFieldsResponse = {
     append_available: boolean
     full_refresh_available: boolean
     supports_webhooks: boolean
+    cdc_available?: boolean
 }
 
 // numeric is snowflake specific and objectid is mongodb specific
@@ -5691,10 +5700,12 @@ export interface ExternalDataSourceSyncSchema {
     sync_time_of_day: string | null
     incremental_field: string | null
     incremental_field_type: string | null
-    sync_type: 'full_refresh' | 'incremental' | 'append' | 'webhook' | null
+    sync_type: 'full_refresh' | 'incremental' | 'append' | 'webhook' | 'cdc' | null
     incremental_fields: IncrementalField[]
     incremental_available: boolean
     append_available: boolean
+    cdc_available?: boolean
+    cdc_table_mode?: 'consolidated' | 'cdc_only' | 'both'
     supports_webhooks: boolean
     description?: string | null
     should_sync_default: boolean
@@ -5703,7 +5714,7 @@ export interface ExternalDataSourceSyncSchema {
 export interface ExternalDataSourceSchema extends SimpleExternalDataSourceSchema {
     table?: SimpleDataWarehouseTable
     incremental: boolean
-    sync_type: 'incremental' | 'full_refresh' | 'append' | 'webhook' | null
+    sync_type: 'incremental' | 'full_refresh' | 'append' | 'webhook' | 'cdc' | null
     sync_time_of_day: string | null
     status?: ExternalDataSchemaStatus
     latest_error: string | null
@@ -5712,6 +5723,7 @@ export interface ExternalDataSourceSchema extends SimpleExternalDataSourceSchema
     sync_frequency: DataWarehouseSyncInterval
     description?: string | null
     should_sync_default?: boolean
+    cdc_table_mode?: 'consolidated' | 'cdc_only' | 'both'
 }
 
 export enum ExternalDataSchemaStatus {
@@ -5916,6 +5928,7 @@ export type BatchExportService =
 export type BatchExportInterval = 'hour' | 'day' | 'week' | 'every 5 minutes' | 'every 15 minutes'
 
 export type DataWarehouseSyncInterval =
+    | '1min'
     | '5min'
     | '15min'
     | '30min'
