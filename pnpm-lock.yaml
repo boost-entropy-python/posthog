@@ -12,6 +12,9 @@ catalogs:
     '@parcel/transformer-typescript-types':
       specifier: 2.13.3
       version: 2.13.3
+    '@posthog/react':
+      specifier: ^1.9.0
+      version: 1.9.0
     '@storybook/addon-actions':
       specifier: ^7.6.4
       version: 7.6.4
@@ -620,6 +623,9 @@ importers:
       '@posthog/products-data-modeling':
         specifier: workspace:*
         version: link:../products/data_modeling
+      '@posthog/products-data-warehouse':
+        specifier: workspace:*
+        version: link:../products/data_warehouse
       '@posthog/products-early-access-features':
         specifier: workspace:*
         version: link:../products/early_access_features
@@ -710,6 +716,9 @@ importers:
       '@posthog/products-workflows':
         specifier: workspace:*
         version: link:../products/workflows
+      '@posthog/react':
+        specifier: 'catalog:'
+        version: 1.9.0(@types/react@18.3.27)(posthog-js@1.369.0)(react@18.3.1)
       '@posthog/replay-shared':
         specifier: workspace:*
         version: link:../common/replay-shared
@@ -2278,7 +2287,41 @@ importers:
         specifier: 18.3.1
         version: 18.3.1(react@18.3.1)
 
-  products/data_warehouse: {}
+  products/data_warehouse:
+    dependencies:
+      '@posthog/icons':
+        specifier: '*'
+        version: 0.36.6(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
+      '@posthog/lemon-ui':
+        specifier: '*'
+        version: 0.0.0(antd@5.26.0(date-fns@2.29.3)(luxon@3.7.2)(moment@2.29.4)(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(kea-router@3.4.1(kea@4.0.0-pre.5(react@18.3.1)))(kea@4.0.0-pre.5(react@18.3.1))(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
+      '@storybook/react':
+        specifier: '*'
+        version: 7.6.24(encoding@0.1.13)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(typescript@5.8.3)
+      '@types/react':
+        specifier: 18.3.27
+        version: 18.3.27
+      kea:
+        specifier: 'catalog:'
+        version: 4.0.0-pre.5(react@18.3.1)
+      kea-forms:
+        specifier: 'catalog:'
+        version: 3.2.0(kea@4.0.0-pre.5(react@18.3.1))
+      kea-loaders:
+        specifier: 'catalog:'
+        version: 3.1.1(kea@4.0.0-pre.5(react@18.3.1))
+      kea-router:
+        specifier: 'catalog:'
+        version: 3.4.1(kea@4.0.0-pre.5(react@18.3.1))
+      kea-test-utils:
+        specifier: 'catalog:'
+        version: 0.2.4(kea@4.0.0-pre.5(react@18.3.1))
+      posthog-js:
+        specifier: 'catalog:'
+        version: 1.369.0
+      react:
+        specifier: 18.3.1
+        version: 18.3.1
 
   products/desktop_recordings: {}
 
@@ -8628,6 +8671,16 @@ packages:
       kea-router: '*'
       react: 18.3.1
       react-dom: 18.3.1
+
+  '@posthog/react@1.9.0':
+    resolution: {integrity: sha512-lVdTsWT5+PtHBu44gSQ7QohbLjAYqHkFAIGAQ+HV8Eh9yj+OcnQ7mXCmyhaMlTBD3z7D0H1eWMp4vQaFnsIyWQ==}
+    peerDependencies:
+      '@types/react': 18.3.27
+      posthog-js: '>=1.257.2'
+      react: 18.3.1
+    peerDependenciesMeta:
+      '@types/react':
+        optional: true
 
   '@posthog/rrdom@0.0.4':
     resolution: {integrity: sha512-hUZOgnIxzB6ZWgKBbuf79oHko+7x1+sQMVtovY0k6fO67e5SwhKkLq3Y/Tn2ayIyUqEKqL8971wP1cmIeIVO+A==}
@@ -31456,6 +31509,13 @@ snapshots:
       kea-router: 3.4.1(kea@4.0.0-pre.5(react@18.3.1))
       react: 18.3.1
       react-dom: 18.3.1(react@18.3.1)
+
+  '@posthog/react@1.9.0(@types/react@18.3.27)(posthog-js@1.369.0)(react@18.3.1)':
+    dependencies:
+      posthog-js: 1.369.0
+      react: 18.3.1
+    optionalDependencies:
+      '@types/react': 18.3.27
 
   '@posthog/rrdom@0.0.4':
     dependencies:
