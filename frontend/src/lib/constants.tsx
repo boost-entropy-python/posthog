@@ -358,6 +358,7 @@ export const FEATURE_FLAGS = {
     MAX_SESSION_SUMMARIZATION_VIDEO_AS_BASE: 'max-session-summarization-video-as-base', // owner: #team-signals
     PRODUCT_AUTONOMY: 'product-autonomy', // owner: #team-signals
     MESSAGING_SES: 'messaging-ses', // owner #team-workflows
+    NOTEBOOKS_COLLABORATION: 'notebooks-collaboration', // owner: #team-platform-features
     NOTEBOOKS_COLLAPSIBLE_SECTIONS: 'notebooks-collapsible-sections', // owner: @benjackwhite
     NOTEBOOK_PYTHON: 'notebook-python', // owner: #team-data-tools
     PAGE_REPORTS_AVERAGE_PAGE_VIEW: 'page-reports-average-page-view', // owner: @jordanm-posthog #team-web-analytics
@@ -431,7 +432,6 @@ export const FEATURE_FLAGS = {
     SEMVER_TARGETING: 'semver-targeting', // owner: #team-feature-flags
     SHOPIFY_DWH: 'shopify-dwh', // owner: #team-warehouse-sources
     SLACK_DWH: 'slack-dwh', // owner: @MarconLP #team-warehouse-sources
-    SHOW_DATA_PIPELINES_NAV_ITEM: 'show-data-pipelines-nav-item', // owner: @raquelmsmith
     SHOW_REFERRER_FAVICON: 'show-referrer-favicon', // owner: @jordanm-posthog #team-web-analytics
     SHOW_REPLAY_FILTERS_FEEDBACK_BUTTON: 'show-replay-filters-feedback-button', // owner: @ksvat #team-replay
     SHOW_SESSION_SUMMARY_FEEDBACK_SURVEY: 'show-session-summary-feedback-survey', // owner: @hayne #team-replay
