@@ -141,12 +141,6 @@ export const RETENTION_RECURRING = 'retention_recurring'
 export const RETENTION_FIRST_OCCURRENCE_MATCHING_FILTERS = 'retention_first_time'
 export const RETENTION_FIRST_EVER_OCCURRENCE = 'retention_first_ever_occurrence'
 
-export const WEBHOOK_SERVICES: Record<string, string> = {
-    Slack: 'slack.com',
-    Discord: 'discord.com',
-    Teams: 'office.com',
-}
-
 // NOTE: Run `dev:sync-flags` locally to sync these flags into your local project
 // or if you're running flox + phrocs you can also run the `sync-feature-flags` process
 //
@@ -303,6 +297,7 @@ export const FEATURE_FLAGS = {
     EXPERIMENTS_TEMPLATES: 'experiments-templates', // owner: @rodrigoi #team-experiments
     FEATURE_FLAG_COHORT_CREATION: 'feature-flag-cohort-creation', // owner: #team-feature-flags
     FEATURE_FLAG_CREATION_INTENTS: 'feature-flag-creation-intents', // owner: #team-feature-flags
+    FEATURE_FLAGS_ACROSS_PROJECTS_INDEX: 'feature-flags-across-projects-index', // owner: #team-platform-features
     FEATURE_FLAGS_V2: 'feature-flags-v2', // owner: @dmarticus #team-feature-flags
     FEATURE_FLAG_DRAG_DROP_CONDITIONS: 'feature-flag-drag-drop-conditions', // owner: @gustavo #team-feature-flags
     FEATURE_FLAG_MIXED_TARGETING: 'feature-flag-mixed-targeting', // owner: @dmarticus #team-feature-flags
