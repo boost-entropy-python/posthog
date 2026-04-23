@@ -41,64 +41,6 @@ InstallSource = Literal["posthog", "twig", "posthog-code"]
 INSTALL_SOURCE_CHOICES = [("posthog", "posthog"), ("twig", "twig"), ("posthog-code", "posthog-code")]
 
 
-# TRICKY: this is not a 1:1 mapping to MCPServer objects.
-# The URL in RECOMMENDED_SERVERS is the MCP server URL, not the OAuth server URL.
-RECOMMENDED_SERVERS = [
-    {
-        "name": "Attio",
-        "url": "https://mcp.attio.com/mcp",
-        "description": "Manage Attio CRM contacts, companies, and deals.",
-        "auth_type": "oauth",
-    },
-    {
-        "name": "Canva",
-        "url": "https://mcp.canva.com/mcp",
-        "description": "Create, edit, and manage Canva designs and assets.",
-        "auth_type": "oauth",
-    },
-    {
-        "name": "Atlassian",
-        "url": "https://mcp.atlassian.com/v1/mcp",
-        "description": "Integrate with Atlassian products like Jira and Confluence.",
-        "auth_type": "oauth",
-    },
-    {
-        "name": "Linear",
-        "url": "https://mcp.linear.app/mcp",
-        "description": "Manage Linear issues, projects, and teams.",
-        "auth_type": "oauth",
-    },
-    {
-        "name": "Monday",
-        "url": "https://mcp.monday.com/mcp",
-        "description": "Manage Monday.com boards, items, and workflows.",
-        "auth_type": "oauth",
-    },
-    {
-        "name": "Notion",
-        "url": "https://mcp.notion.com/mcp",
-        "description": "Search and manage Notion pages, databases, and knowledge base content.",
-        "auth_type": "oauth",
-    },
-]
-
-
-class MCPServer(CreatedMetaFields, UpdatedMetaFields, UUIDModel):
-    """Legacy shared-DCR server record. Being superseded by MCPServerTemplate (for
-    curated pre-registered apps) and by per-installation creds stored in
-    MCPServerInstallation.sensitive_configuration (for user-added servers).
-    Kept during rollout; slated for removal once data migration completes."""
-
-    name = models.CharField(max_length=200)
-    url = models.URLField(max_length=2048, unique=True)  # OAuth issuer URL
-    description = models.TextField(blank=True, default="")
-    oauth_metadata = models.JSONField(default=dict, blank=True)
-    oauth_client_id = models.CharField(max_length=500, blank=True, default="")
-
-    class Meta:
-        db_table = "mcp_store_mcpserver"
-
-
 class MCPServerTemplate(CreatedMetaFields, UpdatedMetaFields, UUIDModel):
     """A curated, pre-registered MCP server. PostHog operators register a real
     OAuth app with the provider ahead of time and paste the client_id /
@@ -125,8 +67,6 @@ class MCPServerTemplate(CreatedMetaFields, UpdatedMetaFields, UUIDModel):
 class MCPServerInstallation(CreatedMetaFields, UpdatedMetaFields, UUIDModel):
     team = models.ForeignKey("posthog.Team", on_delete=models.CASCADE)
     user = models.ForeignKey("posthog.User", on_delete=models.CASCADE, related_name="mcp_server_installations")
-    # Legacy FK — populated before the template refactor. New code reads `template` instead.
-    server = models.ForeignKey(MCPServer, on_delete=models.CASCADE, related_name="installations", null=True, blank=True)
     template = models.ForeignKey(
         MCPServerTemplate, on_delete=models.SET_NULL, related_name="installations", null=True, blank=True
     )
@@ -175,9 +115,6 @@ class MCPOAuthState(CreatedMetaFields, UpdatedMetaFields, UUIDModel):
     token_hash = models.CharField(max_length=64, unique=True, db_index=True)
     installation = models.ForeignKey(MCPServerInstallation, on_delete=models.CASCADE, related_name="oauth_states")
     team = models.ForeignKey("posthog.Team", on_delete=models.CASCADE)
-    # Legacy FK for the DCR-keyed server. New flows populate `template` instead (or
-    # leave it null for custom installs, which resolve creds from the installation itself).
-    server = models.ForeignKey(MCPServer, on_delete=models.CASCADE, related_name="oauth_states", null=True, blank=True)
     template = models.ForeignKey(
         MCPServerTemplate, on_delete=models.CASCADE, related_name="oauth_states", null=True, blank=True
     )
