@@ -4438,6 +4438,12 @@ class SnapchatAdsTableKeywords(StrEnum):
     CAMPAIGNS = "campaigns"
 
 
+class ReleaseStatus(StrEnum):
+    ALPHA = "alpha"
+    BETA = "beta"
+    GA = "ga"
+
+
 class SourceFieldFileUploadJsonFormatConfig(BaseModel):
     model_config = ConfigDict(
         extra="forbid",
@@ -6733,6 +6739,14 @@ class ExperimentParameters(BaseModel):
             " but catch smaller changes. Suggest 20–30% for most experiments."
         ),
     )
+    rollout_percentage: float | None = Field(
+        default=None,
+        description=(
+            "Overall rollout percentage (0-100). Controls what fraction of all users"
+            " enter the experiment. Users outside the rollout never see any variant and"
+            " are excluded from analysis. Default: 100."
+        ),
+    )
 
 
 class ExperimentStatsBase(BaseModel):
@@ -8649,6 +8663,14 @@ class UsageMetric(BaseModel):
     interval: int
     name: str
     previous: float
+    timeseries: list[float] | None = Field(
+        default=None,
+        description=("Daily values over the current interval period. Only populated when display is 'sparkline'."),
+    )
+    timeseries_labels: list[str] | None = Field(
+        default=None,
+        description=("ISO date strings for sparkline tooltip labels. Only populated when display is 'sparkline'."),
+    )
     value: float
 
 
@@ -17219,6 +17241,9 @@ class RetentionEntity(BaseModel):
     model_config = ConfigDict(
         extra="forbid",
     )
+    aggregation_target_field: str | None = Field(
+        default=None, description="Data warehouse field used as the actor identifier"
+    )
     custom_name: str | None = None
     id: str | float | None = None
     kind: RetentionEntityKind | None = None
@@ -17249,6 +17274,8 @@ class RetentionEntity(BaseModel):
         ]
         | None
     ) = Field(default=None, description="filters on the event")
+    table_name: str | None = Field(default=None, description="Data warehouse table name")
+    timestamp_field: str | None = Field(default=None, description="Data warehouse timestamp field")
     type: EntityType | None = None
     uuid: str | None = None
 
@@ -17270,6 +17297,13 @@ class RetentionFilter(BaseModel):
         description="The aggregation type to use for retention",
     )
     cumulative: bool | None = None
+    customAggregationTarget: bool | None = Field(
+        default=None,
+        description=(
+            "For data warehouse based retention insights when the aggregation target"
+            " can't be mapped to persons or groups."
+        ),
+    )
     dashboardDisplay: RetentionDashboardDisplayType | None = None
     display: ChartDisplayType | None = Field(default=None, description="controls the display of the retention graph")
     goalLines: list[GoalLine] | None = None
@@ -23233,7 +23267,6 @@ class SourceConfig(BaseModel):
     model_config = ConfigDict(
         extra="forbid",
     )
-    betaSource: bool | None = None
     caption: str | Any | None = None
     disabledReason: str | None = None
     docsUrl: str | None = None
@@ -23256,6 +23289,7 @@ class SourceConfig(BaseModel):
     label: str | None = None
     name: ExternalDataSourceType
     permissionsCaption: str | None = None
+    releaseStatus: ReleaseStatus | None = None
     suggestedTables: list[SuggestedTable] | None = Field(
         default=[],
         description="Tables to suggest enabling, with optional tooltip explaining why",
