@@ -40,12 +40,9 @@ from posthog.models.activity_logging.activity_page import activity_page_response
 from posthog.models.data_color_theme import DataColorTheme
 from posthog.models.evaluation_context import EvaluationContext, TeamDefaultEvaluationContext, normalize_context_name
 from posthog.models.event_ingestion_restriction_config import EventIngestionRestrictionConfig
-from posthog.models.group_type_mapping import get_group_types_for_project
+from posthog.models.group_type_mapping import cached_group_types_for_team
 from posthog.models.organization import OrganizationMembership
-from posthog.models.product_intent.product_intent import (
-    ProductIntentSerializer,
-    enqueue_product_activation_calc_debounced,
-)
+from posthog.models.product_intent.product_intent import ProductIntentSerializer, calculate_product_activation
 from posthog.models.project import Project
 from posthog.models.team.extensions import get_or_create_team_extension
 from posthog.models.team.setup_tasks import SetupTaskId
@@ -372,6 +369,37 @@ def _validate_trigger_property_filters(properties: object, context: str) -> None
             raise exceptions.ValidationError(f"{context}: property {prop_idx} must have a 'value' field.")
 
 
+_default_theme_id_cache: int | None = None
+
+
+def _default_data_color_theme_id() -> int | None:
+    """Return the system-wide default DataColorTheme id, cached for process lifetime.
+
+    The default is created by data migration `0537_data_color_themes.py` and
+    is effectively a constant after deploy - cache it to skip a per-render PG
+    round-trip in `TeamSerializer.to_representation` for orgs without the
+    DATA_COLOR_THEMES feature.
+
+    We deliberately do NOT cache `None`: if the first call lands before the
+    migration is applied, or against an instance where no global default
+    exists yet, we want subsequent calls to recover automatically once the
+    row appears. `.order_by("id")` keeps the chosen ID deterministic across
+    workers if multiple globals ever exist.
+    """
+    global _default_theme_id_cache
+    if _default_theme_id_cache is None:
+        _default_theme_id_cache = (
+            DataColorTheme.objects.filter(team_id__isnull=True).order_by("id").values_list("id", flat=True).first()
+        )
+    return _default_theme_id_cache
+
+
+def _reset_default_data_color_theme_id_cache() -> None:
+    """Test-only helper for explicit cache invalidation."""
+    global _default_theme_id_cache
+    _default_theme_id_cache = None
+
+
 class TeamSerializer(serializers.ModelSerializer, UserPermissionsSerializerMixin, UserAccessControlSerializerMixin):
     instance: Team | None
 
@@ -444,9 +472,7 @@ class TeamSerializer(serializers.ModelSerializer, UserPermissionsSerializerMixin
         representation = super().to_representation(instance)
         # fallback to the default posthog data theme id, if the color feature isn't available e.g. after a downgrade
         if not instance.organization.is_feature_available(AvailableFeature.DATA_COLOR_THEMES):
-            representation["default_data_theme"] = (
-                DataColorTheme.objects.filter(team_id__isnull=True).values_list("id", flat=True).first()
-            )
+            representation["default_data_theme"] = _default_data_color_theme_id()
 
         return representation
 
@@ -455,10 +481,10 @@ class TeamSerializer(serializers.ModelSerializer, UserPermissionsSerializerMixin
         return self.user_permissions.team(team).effective_membership_level
 
     def get_has_group_types(self, team: Team) -> bool:
-        return bool(get_group_types_for_project(team.project_id))
+        return bool(cached_group_types_for_team(team))
 
     def get_group_types(self, team: Team) -> list[dict[str, Any]]:
-        return get_group_types_for_project(team.project_id)
+        return cached_group_types_for_team(team)
 
     def get_live_events_token(self, team: Team) -> str | None:
         request = self.context.get("request")
@@ -477,7 +503,7 @@ class TeamSerializer(serializers.ModelSerializer, UserPermissionsSerializerMixin
 
     @extend_schema_field(serializers.ListField(child=serializers.DictField()))
     def get_product_intents(self, obj):
-        enqueue_product_activation_calc_debounced(obj.id)
+        calculate_product_activation.delay(obj.id, only_calc_if_days_since_last_checked=1)
         return ProductIntent.objects.filter(team=obj).values(
             "product_type", "created_at", "onboarding_completed_at", "updated_at"
         )
