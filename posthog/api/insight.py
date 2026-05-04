@@ -50,6 +50,7 @@ from posthog.api.insight_metadata import generate_insight_metadata
 from posthog.api.insight_suggestions import get_insight_analysis, get_insight_suggestions
 from posthog.api.insight_variable import map_stale_to_latest
 from posthog.api.monitoring import Feature, monitor
+from posthog.api.openapi_parameters import make_filters_override_param, make_variables_override_param
 from posthog.api.query_coalescer import QueryCoalescingMixin
 from posthog.api.routing import TeamAndOrgViewSetMixin
 from posthog.api.scoped_related_fields import TeamScopedPrimaryKeyRelatedField
@@ -1733,6 +1734,8 @@ Background calculation can be tracked using the `query_status` response field.""
 Only if loading an insight in the context of a dashboard: The relevant dashboard's ID.
 When set, the specified dashboard's filters and date range override will be applied.""",
             ),
+            make_variables_override_param(subject_label="the insight's HogQL", tool_name="insight-get"),
+            make_filters_override_param(subject_label="the insight's"),
         ],
     )
     @monitor(feature=Feature.INSIGHT, endpoint="insight", method="GET")
