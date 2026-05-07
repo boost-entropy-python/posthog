@@ -1,16 +1,16 @@
 import React, { useCallback, useMemo } from 'react'
 
-import { type BarChartPrivate, computeBarAtIndex, computeSeriesBars } from '../core/bar-layout'
-import { type BarRect, drawBarHighlight, drawBars, drawGrid, type DrawContext } from '../core/canvas-renderer'
-import { Chart } from '../core/Chart'
-import { ChartErrorBoundary } from '../core/ChartErrorBoundary'
+import { type BarChartPrivate, computeBarAtIndex, computeSeriesBars } from '../../core/bar-layout'
+import { type BarRect, drawBarHighlight, drawBars, drawGrid, type DrawContext } from '../../core/canvas-renderer'
+import { Chart } from '../../core/Chart'
+import { ChartErrorBoundary } from '../../core/ChartErrorBoundary'
 import {
     computePercentStackData,
     computeStackData,
     createBarScales,
     type StackedBand,
     yTickCountForHeight,
-} from '../core/scales'
+} from '../../core/scales'
 import type {
     BarChartConfig,
     ChartDimensions,
@@ -22,8 +22,11 @@ import type {
     ResolvedSeries,
     Series,
     TooltipContext,
-} from '../core/types'
-import { DEFAULT_Y_AXIS_ID } from '../core/types'
+} from '../../core/types'
+import { DEFAULT_Y_AXIS_ID } from '../../core/types'
+import { computeVisibleXLabels } from '../../overlays/AxisLabels'
+import { BarTooltip } from './BarTooltip'
+import { seriesKeysAtCursor } from './utils/bars-under-cursor'
 
 function bandCenter(scales: BarChartPrivate['__barChart'], label: string): number | undefined {
     const start = scales.band(label)
@@ -67,8 +70,9 @@ function BarChartInner<Meta = unknown>({
         yScaleType = 'linear',
         showGrid = false,
         barLayout = 'stacked',
-        barCornerRadius = 4,
+        barCornerRadius = 0,
         axisOrientation = 'vertical',
+        xTickFormatter,
     } = config ?? {}
     const isHorizontal = axisOrientation === 'horizontal'
 
@@ -168,9 +172,26 @@ function BarChartInner<Meta = unknown>({
             }
 
             if (showGrid) {
+                // Align cross-axis grid with visible category labels, not every band.
+                let categoryTicks: number[] = []
+                if (isHorizontal) {
+                    for (const label of drawLabels) {
+                        const coord = bandCenter(d3Scales, label)
+                        if (coord != null && isFinite(coord)) {
+                            categoryTicks.push(coord)
+                        }
+                    }
+                } else {
+                    categoryTicks = computeVisibleXLabels(
+                        drawLabels,
+                        (label) => bandCenter(d3Scales, label),
+                        xTickFormatter
+                    ).map((entry) => entry.x)
+                }
                 drawGrid(baseDrawCtx, {
                     gridColor: theme.gridColor,
                     orientation: isHorizontal ? 'horizontal' : 'vertical',
+                    categoryTicks,
                 })
             }
 
@@ -198,19 +219,50 @@ function BarChartInner<Meta = unknown>({
                 )
             }
         },
-        [showGrid, stackedData, barLayout, isHorizontal, topStackedKeyByAxis, barCornerRadius]
+        [showGrid, stackedData, barLayout, isHorizontal, topStackedKeyByAxis, barCornerRadius, xTickFormatter]
     )
 
     const drawHover = useCallback(
-        ({ ctx, scales, series: coloredSeries, labels: drawLabels, hoverIndex, theme }: ChartDrawArgs) => {
+        ({
+            ctx,
+            scales,
+            series: coloredSeries,
+            labels: drawLabels,
+            hoverIndex,
+            hoverPosition,
+            theme,
+        }: ChartDrawArgs) => {
             const d3Scales = (scales._private as BarChartPrivate | undefined)?.__barChart
             if (!d3Scales || hoverIndex < 0) {
                 return
             }
-            const highlightColor = theme.crosshairColor ?? 'rgba(0, 0, 0, 0.4)'
+            const highlightColor = theme.crosshairColor ?? 'rgba(0, 0, 0, 0.2)'
             const hoveredLabel = drawLabels[hoverIndex]
+            // For grouped, narrow to the bars under the cursor. If the cursor sits in a gap
+            // (no hits), fall back to highlighting all — matches the tooltip narrower's
+            // gap-fallback so highlight and tooltip don't disagree about what's "active".
+            let hitKeys: Set<string> | null = null
+            if (barLayout === 'grouped' && hoverPosition) {
+                const hits = seriesKeysAtCursor({
+                    series: coloredSeries,
+                    label: hoveredLabel,
+                    dataIndex: hoverIndex,
+                    cursor: hoverPosition,
+                    scales: d3Scales,
+                    layout: barLayout,
+                    isHorizontal,
+                    stackedData,
+                    topStackedKeyByAxis,
+                })
+                if (hits.size > 0) {
+                    hitKeys = hits
+                }
+            }
             for (const s of coloredSeries) {
                 if (s.visibility?.excluded) {
+                    continue
+                }
+                if (hitKeys && !hitKeys.has(s.key)) {
                     continue
                 }
                 const stackedBand = stackedData?.get(s.key)
@@ -258,7 +310,16 @@ function BarChartInner<Meta = unknown>({
             createScales={createScales}
             drawStatic={drawStatic}
             drawHover={drawHover}
-            tooltip={tooltip}
+            tooltip={(ctx) => (
+                <BarTooltip<Meta>
+                    ctx={ctx}
+                    userTooltip={tooltip}
+                    stackedData={stackedData}
+                    topStackedKeyByAxis={topStackedKeyByAxis}
+                    layout={barLayout}
+                    isHorizontal={isHorizontal}
+                />
+            )}
             onPointClick={onPointClick}
             className={className}
             dataAttr={dataAttr}
