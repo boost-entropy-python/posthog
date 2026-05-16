@@ -1,8 +1,10 @@
+import Vapi from '@vapi-ai/web'
 import { useEffect, useRef, useState } from 'react'
 
 import { LemonButton } from '@posthog/lemon-ui'
 
 import { Logo } from 'lib/brand/Logo'
+import { RobotHog } from 'lib/components/hedgehogs'
 
 import { InterviewExportPayload } from '../types'
 
@@ -44,7 +46,7 @@ export default function ExporterInterviewScene({
 }): JSX.Element {
     const [state, setState] = useState<CallState>('idle')
     const [errorMessage, setErrorMessage] = useState<string | null>(null)
-    const vapiRef = useRef<{ stop: () => void } | null>(null)
+    const vapiRef = useRef<Vapi | null>(null)
 
     useEffect(() => {
         document.title = `Interview · ${interview.topic}`
@@ -64,10 +66,7 @@ export default function ExporterInterviewScene({
         }
         setState('loading')
         try {
-            const [{ default: Vapi }, startPayload] = await Promise.all([
-                import(/* webpackChunkName: "vapi-sdk" */ '@vapi-ai/web'),
-                fetchStartCallPayload(accessToken),
-            ])
+            const startPayload = await fetchStartCallPayload(accessToken)
             const vapi = new Vapi(startPayload.public_key)
             vapiRef.current = vapi
             vapi.on('call-end', () => setState('ended'))
@@ -94,6 +93,10 @@ export default function ExporterInterviewScene({
             <div className="mb-8 flex items-center justify-between">
                 <Logo className="text-lg" />
                 <span className="text-xs text-muted">Powered by PostHog</span>
+            </div>
+
+            <div className="flex justify-center mb-6">
+                <RobotHog className="w-40 h-40" alt="" />
             </div>
 
             <h1 className="text-3xl font-bold mb-4">Hi {interview.user_name}!</h1>
