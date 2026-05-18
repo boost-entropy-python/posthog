@@ -19,7 +19,7 @@ import { buildToolResultPayload, isToolCallPayload } from '@/lib/build-tool-resu
 import { DurableObjectCache } from '@/lib/cache/DurableObjectCache'
 import { MCPClientProfile } from '@/lib/client-detection'
 import {
-    CUSTOM_API_BASE_URL,
+    getCustomApiBaseUrl,
     POSTHOG_EU_BASE_URL,
     POSTHOG_US_BASE_URL,
     getBaseUrlForRegion,
@@ -225,8 +225,9 @@ export class MCP extends McpAgent<Env> {
     }
 
     async getBaseUrl(): Promise<string> {
-        if (CUSTOM_API_BASE_URL) {
-            return CUSTOM_API_BASE_URL
+        const customBaseUrl = getCustomApiBaseUrl()
+        if (customBaseUrl) {
+            return customBaseUrl
         }
 
         // Check region from request props first (passed via URL param), then cache, then detect
@@ -576,7 +577,7 @@ export class MCP extends McpAgent<Env> {
             // Trigger OAuth introspection so the OAuth client name is cached before the useSingleExec decision below
             context.stateManager.getApiKey(),
         ])
-        const posthogMcpAnalyticsOn = posthogMcpAnalyticsFlag.enabled
+        const isPosthogMCPAnalyticsEnabled = posthogMcpAnalyticsFlag.enabled
 
         const oauthClientName = (await this.cache.get('clientName')) || undefined
 
@@ -768,9 +769,9 @@ export class MCP extends McpAgent<Env> {
         }
 
         Object.assign(this.requestProperties, {
-            mcpAnalyticsProvider: posthogMcpAnalyticsOn ? 'posthog_mcp_analytics' : 'mcpcat',
+            mcpAnalyticsProvider: isPosthogMCPAnalyticsEnabled ? 'posthog_mcp_analytics' : 'mcpcat',
             mcpAnalyticsFlagKey: POSTHOG_MCP_ANALYTICS_FLAG,
-            mcpAnalyticsFlagEnabled: posthogMcpAnalyticsOn,
+            mcpAnalyticsFlagEnabled: isPosthogMCPAnalyticsEnabled,
             ...(posthogMcpAnalyticsFlag.errorName
                 ? { mcpAnalyticsFlagErrorName: posthogMcpAnalyticsFlag.errorName }
                 : {}),
@@ -787,7 +788,7 @@ export class MCP extends McpAgent<Env> {
         // it lets the model report a gap in our discrete tool catalog. In
         // single-exec mode the wrapper handles every call, so the missing-tool
         // signal has nothing to map to and the extra slot is pure noise.
-        if (posthogMcpAnalyticsOn) {
+        if (isPosthogMCPAnalyticsEnabled) {
             // In single-exec mode every event's `$mcp_tool_name` is `exec`, so the
             // SDK's `$mcp_tool_description` would be the dispatcher's static text on
             // every call. Resolve the inner tool the agent was actually invoking
