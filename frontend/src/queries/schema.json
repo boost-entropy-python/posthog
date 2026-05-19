@@ -3556,7 +3556,8 @@
                 "call_mcp_server",
                 "search_llm_traces",
                 "run_hog_eval_test",
-                "diagnose_proxy"
+                "diagnose_proxy",
+                "web_analytics_doctor"
             ],
             "type": "string"
         },
@@ -10485,6 +10486,13 @@
                 },
                 "leftYAxisSettings": {
                     "$ref": "#/definitions/YAxisSettings"
+                },
+                "resultCustomizations": {
+                    "additionalProperties": {
+                        "$ref": "#/definitions/ResultCustomizationByValue"
+                    },
+                    "description": "Per-breakdown-value color customizations. Keyed by the raw breakdown column value.",
+                    "type": "object"
                 },
                 "rightYAxisSettings": {
                     "$ref": "#/definitions/YAxisSettings"
