@@ -11561,6 +11561,7 @@ export namespace Schemas {
     * `ClickHouse` - ClickHouse
     * `Plain` - Plain
     * `Resend` - Resend
+    * `PgAnalyze` - PgAnalyze
      */
     export type ExternalDataSourceTypeEnum = typeof ExternalDataSourceTypeEnum[keyof typeof ExternalDataSourceTypeEnum];
 
@@ -11710,6 +11711,7 @@ export namespace Schemas {
       ClickHouse: 'ClickHouse',
       Plain: 'Plain',
       Resend: 'Resend',
+      PgAnalyze: 'PgAnalyze',
     } as const;
 
     /**
@@ -11865,7 +11867,8 @@ export namespace Schemas {
       * `Convex` - Convex
       * `ClickHouse` - ClickHouse
       * `Plain` - Plain
-      * `Resend` - Resend */
+      * `Resend` - Resend
+      * `PgAnalyze` - PgAnalyze */
       source_type: ExternalDataSourceTypeEnum;
     }
 
@@ -15987,7 +15990,8 @@ export namespace Schemas {
       * `Convex` - Convex
       * `ClickHouse` - ClickHouse
       * `Plain` - Plain
-      * `Resend` - Resend */
+      * `Resend` - Resend
+      * `PgAnalyze` - PgAnalyze */
       source_type: ExternalDataSourceTypeEnum;
       /** Connection credentials and a 'schemas' array. Keys depend on source_type. */
       payload: ExternalDataSourceCreatePayload;
@@ -23435,6 +23439,7 @@ export namespace Schemas {
     * `zendesk` - Zendesk
     * `conversations` - Conversations
     * `error_tracking` - Error tracking
+    * `pganalyze` - pganalyze
      */
     export type SourceProductEnum = typeof SourceProductEnum[keyof typeof SourceProductEnum];
 
@@ -23447,6 +23452,7 @@ export namespace Schemas {
       Zendesk: 'zendesk',
       Conversations: 'conversations',
       ErrorTracking: 'error_tracking',
+      Pganalyze: 'pganalyze',
     } as const;
 
     /**
@@ -23649,8 +23655,7 @@ export namespace Schemas {
     } as const;
 
     /**
-     * * `hourly` - Hourly
-    * `daily` - Daily
+     * * `daily` - Daily
     * `weekly` - Weekly
     * `monthly` - Monthly
     * `yearly` - Yearly
@@ -23659,7 +23664,6 @@ export namespace Schemas {
 
 
     export const SubscriptionFrequencyEnum = {
-      Hourly: 'hourly',
       Daily: 'daily',
       Weekly: 'weekly',
       Monthly: 'monthly',
@@ -23717,9 +23721,8 @@ export namespace Schemas {
       target_type: TargetTypeEnum;
       /** Recipient(s): comma-separated email addresses for email, Slack channel name/ID for slack, or full URL for webhook. */
       target_value: string;
-      /** How often to deliver: hourly, daily, weekly, monthly, or yearly. Hourly is feature-flagged and limited to one active subscription per organization.
+      /** How often to deliver: daily, weekly, monthly, or yearly.
 
-      * `hourly` - Hourly
       * `daily` - Daily
       * `weekly` - Weekly
       * `monthly` - Monthly
@@ -29365,9 +29368,8 @@ export namespace Schemas {
       target_type?: TargetTypeEnum;
       /** Recipient(s): comma-separated email addresses for email, Slack channel name/ID for slack, or full URL for webhook. */
       target_value?: string;
-      /** How often to deliver: hourly, daily, weekly, monthly, or yearly. Hourly is feature-flagged and limited to one active subscription per organization.
+      /** How often to deliver: daily, weekly, monthly, or yearly.
 
-      * `hourly` - Hourly
       * `daily` - Daily
       * `weekly` - Weekly
       * `monthly` - Monthly
@@ -34445,6 +34447,24 @@ export namespace Schemas {
       stats: SurveyGlobalStatsResponseStats;
       /** Calculated response and dismissal rates. */
       rates: SurveyGlobalStatsResponseRates;
+    }
+
+    export interface SurveyQuestionLabel {
+      /** UUID assigned to the survey question. */
+      question_id: string;
+      /** Untranslated question text as configured by the survey author. */
+      question_text: string;
+      /** Zero-based index of the question within the survey. */
+      question_index: number;
+      /** UUID of the survey this question belongs to. */
+      survey_id: string;
+      /** Display name of the survey. */
+      survey_name: string;
+    }
+
+    export interface SurveyQuestionLabelsResponse {
+      /** One entry per question that has an ID assigned, across all the team's surveys. */
+      labels: SurveyQuestionLabel[];
     }
 
     export interface SurveySerializerCreateUpdateOnly {
