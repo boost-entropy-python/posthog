@@ -3990,6 +3990,7 @@ class ProductIntentContext(StrEnum):
     ENDPOINT_CREATED = "endpoint_created"
     ENDPOINT_CREATED_FROM_INSIGHT = "endpoint_created_from_insight"
     ENDPOINT_CREATED_FROM_SQL_EDITOR = "endpoint_created_from_sql_editor"
+    TRACING_DOCS_VIEWED = "tracing_docs_viewed"
 
 
 class ProductItemCategory(StrEnum):
@@ -4285,6 +4286,12 @@ class RecordingPropertyFilter(BaseModel):
     operator: PropertyOperator
     type: Literal["recording"] = "recording"
     value: list[str | float | bool] | str | float | bool | None = None
+
+
+class HideViewedRecordings(Enum):
+    CURRENT_USER = "current-user"
+    ANY_USER = "any-user"
+    NONE_TYPE_NONE = None
 
 
 class RedditAdsDefaultSources(StrEnum):
@@ -23245,6 +23252,14 @@ class RecordingsQuery(BaseModel):
         ]
         | None
     ) = None
+    hide_viewed_recordings: HideViewedRecordings | None = Field(
+        default=None,
+        description=(
+            "Exclude recordings already viewed by the current user ('current-user'), by"
+            " any team member ('any-user'), or none (default). Applied server-side so"
+            " pagination and the result cursor operate on the filtered set."
+        ),
+    )
     kind: Literal["RecordingsQuery"] = "RecordingsQuery"
     limit: int | None = None
     modifiers: HogQLQueryModifiers | None = Field(default=None, description="Modifiers used when performing the query")
