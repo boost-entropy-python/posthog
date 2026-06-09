@@ -1,7 +1,7 @@
 import { useActions, useValues } from 'kea'
 import { router } from 'kea-router'
 
-import { IconCopy, IconPencil, IconPlus, IconSearch, IconTrash } from '@posthog/icons'
+import { IconPencil, IconPlus, IconRefresh, IconSearch, IconTrash } from '@posthog/icons'
 import { LemonButton, LemonInput, LemonSwitch, LemonTable, LemonTag, Link } from '@posthog/lemon-ui'
 
 import { AccessControlAction } from 'lib/components/AccessControlAction'
@@ -20,6 +20,7 @@ import { ProductKey } from '~/queries/schema/schema-general'
 import { AccessControlLevel, AccessControlResourceType } from '~/types'
 
 import { FilterPill } from '../components/FilterPill'
+import { ReplayVisionFeedbackButton } from '../components/ReplayVisionFeedbackButton'
 import { VisionMetrics } from './components/VisionMetrics'
 import { type ScannersSorting, SCANNERS_PAGE_SIZE, replayScannersLogic } from './replayScannersLogic'
 import {
@@ -59,7 +60,7 @@ export function ReplayScannersScene(): JSX.Element {
         hasActiveFilters,
         scannerStats,
     } = useValues(replayScannersLogic)
-    const { loadScanners, deleteScanner, duplicateScanner, toggleScannerEnabled, setScannersFilters, clearFilters } =
+    const { loadScanners, deleteScanner, toggleScannerEnabled, setScannersFilters, clearFilters } =
         useActions(replayScannersLogic)
     const { push } = useActions(router)
 
@@ -164,18 +165,6 @@ export function ReplayScannersScene(): JSX.Element {
                         <LemonButton
                             size="small"
                             type="secondary"
-                            icon={<IconCopy />}
-                            onClick={() => duplicateScanner(scanner.id)}
-                            tooltip="Duplicate"
-                        />
-                    </AccessControlAction>
-                    <AccessControlAction
-                        resourceType={AccessControlResourceType.SessionRecording}
-                        minAccessLevel={AccessControlLevel.Editor}
-                    >
-                        <LemonButton
-                            size="small"
-                            type="secondary"
                             status="danger"
                             icon={<IconTrash />}
                             onClick={() =>
@@ -204,6 +193,7 @@ export function ReplayScannersScene(): JSX.Element {
                 name="Replay vision"
                 description="Set up AI scanners that automatically analyze new session recordings as they come in. Each result emits a queryable event."
                 resourceType={{ type: 'replay_vision' }}
+                actions={<ReplayVisionFeedbackButton />}
             />
 
             <ProductIntroduction
@@ -246,6 +236,7 @@ export function ReplayScannersScene(): JSX.Element {
                         className="max-w-sm"
                     />
                     <div className="ml-auto flex flex-wrap items-center gap-2">
+                        <ReplayVisionFeedbackButton label="Feedback?" type="tertiary" />
                         <FilterPill<EnabledFilter>
                             label="Status"
                             options={ENABLED_OPTIONS}
@@ -269,9 +260,14 @@ export function ReplayScannersScene(): JSX.Element {
                                 Clear filters
                             </LemonButton>
                         )}
-                        <LemonButton type="secondary" onClick={() => loadScanners()} size="small">
-                            Refresh
-                        </LemonButton>
+                        <LemonButton
+                            type="secondary"
+                            size="small"
+                            icon={<IconRefresh />}
+                            tooltip="Refresh"
+                            onClick={() => loadScanners()}
+                            loading={scannersLoading}
+                        />
                     </div>
                 </div>
 
