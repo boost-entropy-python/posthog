@@ -6869,7 +6869,12 @@ export const externalDataSources = [
     'Datorama',
     'Ahrefs',
     'Lightfield',
+    'Appstack',
+    'Razorpay',
+    'Neon',
+    'NewRelic',
     'Custom',
+    'Tile38',
 ] as const
 
 export type ExternalDataSourceType = (typeof externalDataSources)[number]

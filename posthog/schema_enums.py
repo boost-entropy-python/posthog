@@ -1789,7 +1789,12 @@ class ExternalDataSourceType(StrEnum):
     DATORAMA = "Datorama"
     AHREFS = "Ahrefs"
     LIGHTFIELD = "Lightfield"
+    APPSTACK = "Appstack"
+    RAZORPAY = "Razorpay"
+    NEON = "Neon"
+    NEW_RELIC = "NewRelic"
     CUSTOM = "Custom"
+    TILE38 = "Tile38"
 
 
 class ExternalQueryErrorCode(StrEnum):
