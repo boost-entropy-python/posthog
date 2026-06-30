@@ -50,12 +50,14 @@ the row lists both.
 | algolia             | HTTP                        | requests                                                        | ✅                          |
 | amazon_ads          | HTTP                        | requests                                                        | ✅                          |
 | amplitude           | HTTP                        | requests                                                        | ✅                          |
+| apify_dataset       | HTTP                        | requests                                                        | ✅                          |
 | apollo              | HTTP                        | requests                                                        | ✅                          |
 | appsflyer           | HTTP (CSV reports)          | requests                                                        | ✅                          |
 | asana               | HTTP                        | requests                                                        | ✅                          |
 | ashby               | HTTP                        | requests                                                        | ✅                          |
 | attentive           | HTTP (webhook-first)        | requests (webhook management)                                   | ✅                          |
 | attio               | HTTP                        | requests + `rest_source.RESTClient`                             | ✅                          |
+| aviationstack       | HTTP                        | requests                                                        | ✅                          |
 | azure_devops        | HTTP                        | requests                                                        | ✅                          |
 | bamboohr            | HTTP                        | requests                                                        | ✅                          |
 | beamer              | HTTP                        | requests                                                        | ✅                          |
@@ -304,7 +306,6 @@ doesn't conflict with concurrent PRs.
 - amazon_selling_partner
 - amazon_sns
 - amazon_sqs
-- apify_dataset
 - appcues
 - appfigures
 - appfollow
@@ -313,7 +314,6 @@ doesn't conflict with concurrent PRs.
 - apptivo
 - assemblyai
 - auth0
-- aviationstack
 - awin
 - aws_cloudtrail
 - azure_blob
