@@ -5525,6 +5525,34 @@
         "requires_ai_consent": true,
         "feature_flag": "mcp-analytics"
     },
+    "mcp-connection-tools-list": {
+        "description": "Load a connected MCP server's live tool catalog by connection `id` (from mcp-connections-list). Returns each tool's `tool_name`, `description`, `input_schema`, and `approval_state`. ALWAYS call this to load a connection's REAL tool names before curating per-agent MCP tool permissions (an agent's `spec.mcps[].tools[]` with `level` / `default_tool_approval`) — never invent or guess tool names from past sessions or skill prose.",
+        "category": "MCP Store",
+        "feature": "mcp_store",
+        "summary": "List a connection's tools",
+        "title": "List a connection's tools",
+        "required_scopes": ["project:read"],
+        "annotations": {
+            "destructiveHint": false,
+            "idempotentHint": true,
+            "openWorldHint": true,
+            "readOnlyHint": true
+        }
+    },
+    "mcp-connections-list": {
+        "description": "List the MCP servers connected to this project (the \"connections\"). Each entry returns its `id` (the connection id you pass to mcp-connection-tools-list), `display_name`, `url`, and status fields (`is_enabled`, `needs_reauth`, `pending_oauth`) plus `tool_count`. Use this to discover which connections exist before loading a connection's live tool catalog with mcp-connection-tools-list.",
+        "category": "MCP Store",
+        "feature": "mcp_store",
+        "summary": "List MCP connections",
+        "title": "List MCP connections",
+        "required_scopes": ["project:read"],
+        "annotations": {
+            "destructiveHint": false,
+            "idempotentHint": true,
+            "openWorldHint": true,
+            "readOnlyHint": true
+        }
+    },
     "mcp-feedback-submit": {
         "description": "Submit qualitative feedback about the current MCP workflow, tool result, or product experience. Use this when the available tools worked but the experience was confusing, incomplete, or could be improved.",
         "category": "MCP analytics",
@@ -6684,6 +6712,20 @@
         "required_scopes": ["signal_scout:write"],
         "annotations": {
             "destructiveHint": false,
+            "idempotentHint": true,
+            "openWorldHint": true,
+            "readOnlyHint": false
+        }
+    },
+    "signals-scout-config-delete": {
+        "description": "Delete one scout config by its `id`, removing the per-scout schedule/emit row outright. Use it to clean up an orphaned config whose `signals-scout-*` skill was archived or deleted — it lingers in `signals-scout-config-list` with an empty description and never runs, but can't otherwise be removed. Deletion is activity-logged. Note: if the skill still exists the coordinator re-creates a default-schedule config on its next tick — to retire a live scout, archive its skill (or set `enabled=false` via `signals-scout-config-update` to make it inert) rather than deleting the config.",
+        "category": "Signals",
+        "feature": "signals",
+        "summary": "Delete a scout config",
+        "title": "Delete a scout config",
+        "required_scopes": ["signal_scout:write"],
+        "annotations": {
+            "destructiveHint": true,
             "idempotentHint": true,
             "openWorldHint": true,
             "readOnlyHint": false
