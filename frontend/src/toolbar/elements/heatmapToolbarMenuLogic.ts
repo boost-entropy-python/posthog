@@ -12,6 +12,7 @@ import { createVersionChecker } from 'lib/utils/semver'
 import {
     DOMIndex,
     buildDOMIndex,
+    hasNonToolbarShadowRoots,
     matchEventToElementUsingIndex,
     matchEventToElementUsingSelectors,
 } from '~/toolbar/elements/domElementIndex'
@@ -20,14 +21,14 @@ import { toolbarApi } from '~/toolbar/toolbarApi'
 import { toolbarConfigLogic } from '~/toolbar/toolbarConfigLogic'
 import { toolbarPosthogJS } from '~/toolbar/toolbarPosthogJS'
 import { CountedHTMLElement, ElementsEventType } from '~/toolbar/types'
-import { TOOLBAR_ID, elementIsVisible, invalidateZoomCache, trimElement } from '~/toolbar/utils'
+import { elementIsVisible, invalidateZoomCache, trimElement } from '~/toolbar/utils'
 import { PropertyFilterType, PropertyOperator } from '~/types'
 
 import type { heatmapToolbarMenuLogicType } from './heatmapToolbarMenuLogicType'
 
 export const doesVersionSupportScrollDepth = createVersionChecker('1.99')
 
-export const ELEMENT_STATS_PAGE_LIMIT = 5000
+const ELEMENT_STATS_PAGE_LIMIT = 5000
 
 function yieldToMain(): Promise<void> {
     return new Promise((resolve) => {
@@ -46,7 +47,7 @@ export type ClickmapProcessingTrigger = 'initial' | 'pagination' | 'refresh' | '
 interface ElementProcessingCache {
     pageElements?: HTMLElement[]
     domIndex?: DOMIndex
-    selectorToElements: Map<string, HTMLElement[]>
+    selectorToElements: Map<string, HTMLElement[] | null>
     lastHref?: string
     intersectionObserver?: IntersectionObserver
     visibilityCache: WeakMap<HTMLElement, boolean>
@@ -68,13 +69,16 @@ function getCachedPageElements(
     const cacheValid = cache.pageElements && !hrefChanged && !cache.cacheInvalidated
 
     if (cacheValid && cache.pageElements && cache.domIndex) {
-        return {
-            pageElements: cache.pageElements,
-            domIndex: cache.domIndex,
-            // attachShadow() emits no light-DOM mutation, so the build-time flag can go stale —
-            // recheck the snapshot on every run
-            hasShadowRoots: cache.pageElements.some((el) => el.shadowRoot && el.id !== TOOLBAR_ID),
-            cacheHit: true,
+        // attachShadow() emits no light-DOM mutation, so shadow roots can appear without
+        // invalidating the cache; when that happens the snapshot predates the shadow content,
+        // so rebuild rather than just flipping the flag over stale data
+        if (hasNonToolbarShadowRoots(cache.pageElements) === cache.domIndex.hasShadowRoots) {
+            return {
+                pageElements: cache.pageElements,
+                domIndex: cache.domIndex,
+                hasShadowRoots: cache.domIndex.hasShadowRoots,
+                cacheHit: true,
+            }
         }
     }
 
@@ -287,6 +291,9 @@ export const heatmapToolbarMenuLogic = kea<heatmapToolbarMenuLogicType>([
                                   paginate_response: true,
                                   sampling_factor: values.samplingFactor,
                                   limit: ELEMENT_STATS_PAGE_LIMIT,
+                                  // the matchers only read the configured data attributes from each
+                                  // element's attributes map, so let the server drop the rest
+                                  data_attributes: values.wantedDataAttributes.join(','),
                               },
                               options
                           )
@@ -301,11 +308,13 @@ export const heatmapToolbarMenuLogic = kea<heatmapToolbarMenuLogicType>([
                     }
 
                     return {
-                        results: dedupeByChainIdentity([
-                            // if url is present we are paginating and merge results, otherwise we only use the new results
-                            ...(url ? values.elementStats?.results || [] : []),
-                            ...(result.data.results || []),
-                        ]),
+                        // if url is present we are paginating and merge results, otherwise we only use the new results
+                        results: url
+                            ? dedupeByChainIdentity([
+                                  ...(values.elementStats?.results || []),
+                                  ...(result.data.results || []),
+                              ])
+                            : result.data.results || [],
                         next: result.data.next,
                         previous: result.data.previous,
                     } as PaginatedResponse<ElementsEventType>
@@ -324,6 +333,13 @@ export const heatmapToolbarMenuLogic = kea<heatmapToolbarMenuLogicType>([
             },
         ],
         elementCount: [(s) => [s.countedElements], (countedElements) => countedElements.length],
+        loadedElementStatsCount: [(s) => [s.elementStats], (elementStats) => elementStats?.results?.length ?? 0],
+        // isTooSimple always reads attr__data-attr, so request it alongside the configured data
+        // attributes — first, so it survives the server's entry cap however many are configured
+        wantedDataAttributes: [
+            () => [toolbarConfigLogic.selectors.dataAttributes],
+            (dataAttributes: string[]): string[] => Array.from(new Set(['data-attr', ...dataAttributes])),
+        ],
         clickCount: [
             (s) => [s.countedElements],
             (countedElements) => (countedElements ? countedElements.map((e) => e.count).reduce((a, b) => a + b, 0) : 0),
@@ -650,11 +666,14 @@ export const heatmapToolbarMenuLogic = kea<heatmapToolbarMenuLogicType>([
     }),
 ])
 
-function dedupeByChainIdentity(events: ElementsEventType[]): ElementsEventType[] {
+export function dedupeByChainIdentity(events: ElementsEventType[]): ElementsEventType[] {
     const seen = new Set<string>()
     const deduped: ElementsEventType[] = []
     for (const event of events) {
-        const identity = `${event.type}:${event.hash}`
+        // the server hashes the raw chain before attribute filtering, so distinct chains that
+        // serialize identically after trimming stay distinct; the serialized-content fallback is
+        // transitional for servers that still return hash as null — delete once that's none of them
+        const identity = `${event.type}:${event.hash ?? JSON.stringify(event.elements)}`
         if (seen.has(identity)) {
             continue
         }
