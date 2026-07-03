@@ -154,7 +154,9 @@ the row lists both.
 | fleetio                 | HTTP                        | requests                                                        | ✅                          |
 | firehydrant             | HTTP                        | requests                                                        | ✅                          |
 | front                   | HTTP                        | requests                                                        | ✅                          |
+| fulcrum                 | HTTP                        | requests                                                        | ✅                          |
 | fullstory               | HTTP                        | requests                                                        | ✅                          |
+| gainsight_px            | HTTP                        | requests                                                        | ✅                          |
 | github                  | HTTP + Webhook              | requests + `WebhookSourceManager`                               | ✅ (pull) / ➖ (webhook)    |
 | giphy                   | HTTP                        | requests                                                        | ✅                          |
 | gitlab                  | HTTP                        | requests                                                        | ✅                          |
@@ -180,6 +182,7 @@ the row lists both.
 | hugging_face            | HTTP                        | requests                                                        | ✅                          |
 | incident_io             | HTTP                        | requests                                                        | ✅                          |
 | insightly               | HTTP                        | requests                                                        | ✅                          |
+| instatus                | HTTP                        | requests                                                        | ✅                          |
 | intercom                | HTTP                        | requests + `rest_source.RESTClient`                             | ✅                          |
 | intruder                | HTTP                        | requests                                                        | ✅                          |
 | invoiceninja            | HTTP                        | requests                                                        | ✅                          |
@@ -188,6 +191,8 @@ the row lists both.
 | jira                    | HTTP                        | requests                                                        | ✅                          |
 | jotform                 | HTTP                        | requests                                                        | ✅                          |
 | justcall                | HTTP                        | requests                                                        | ✅                          |
+| k6_cloud                | HTTP                        | requests                                                        | ✅                          |
+| katana                  | HTTP                        | requests                                                        | ✅                          |
 | klaviyo                 | HTTP                        | requests                                                        | ✅                          |
 | lago                    | HTTP                        | requests                                                        | ✅                          |
 | launchdarkly            | HTTP                        | requests                                                        | ✅                          |
@@ -195,6 +200,7 @@ the row lists both.
 | lattice                 | HTTP                        | requests                                                        | ✅                          |
 | leadfeeder              | HTTP                        | requests                                                        | ✅                          |
 | lemlist                 | HTTP                        | requests                                                        | ✅                          |
+| less_annoying_crm       | HTTP                        | requests                                                        | ✅                          |
 | lightspeed_retail       | HTTP                        | requests                                                        | ✅                          |
 | linear                  | HTTP                        | requests                                                        | ✅                          |
 | lever                   | HTTP                        | requests                                                        | ✅                          |
@@ -243,8 +249,10 @@ the row lists both.
 | papersign               | HTTP                        | requests                                                        | ✅                          |
 | paystack                | HTTP                        | requests + `rest_source.RESTClient`                             | ✅                          |
 | pendo                   | HTTP                        | requests                                                        | ✅                          |
+| persona                 | HTTP                        | requests                                                        | ✅                          |
 | personio                | HTTP                        | requests                                                        | ✅                          |
 | pexels                  | HTTP                        | requests                                                        | ✅                          |
+| picqer                  | HTTP                        | requests                                                        | ✅                          |
 | pingdom                 | HTTP                        | requests                                                        | ✅                          |
 | pinterest_ads           | HTTP                        | requests                                                        | ✅                          |
 | pipedrive               | HTTP                        | requests                                                        | ✅                          |
@@ -441,8 +449,8 @@ doesn't conflict with concurrent PRs.
 - freshbooks
 - freshcaller
 - freshchat
+- freshservice
 - fulcrum
-- gainsight_px
 - gitbook
 - glassfrog
 - gmail
@@ -484,7 +492,6 @@ doesn't conflict with concurrent PRs.
 - insightful
 - instagram
 - instantly
-- instatus
 - interzoid
 - invoiced
 - jamf_pro
@@ -492,9 +499,7 @@ doesn't conflict with concurrent PRs.
 - jobnimbus
 - judgeme_reviews
 - justsift
-- k6_cloud
 - kafka
-- katana
 - keka
 - kisi
 - kissmetrics
@@ -504,7 +509,6 @@ doesn't conflict with concurrent PRs.
 - kyve
 - leexi
 - lemon_squeezy
-- less_annoying_crm
 - lever
 - liana
 - lightfield
@@ -577,8 +581,8 @@ doesn't conflict with concurrent PRs.
 - perk
 - persistiq
 - persona
+- pexels
 - phyllo
-- picqer
 - pipeliner
 - pivotal_tracker
 - piwik
