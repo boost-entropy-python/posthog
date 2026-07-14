@@ -200,6 +200,7 @@ the row lists both.
 | guardian                | HTTP                        | requests                                                        | ✅                          |
 | guru                    | HTTP                        | requests                                                        | ✅                          |
 | harvey                  | HTTP                        | requests                                                        | ✅                          |
+| hatchet                 | HTTP                        | requests                                                        | ✅                          |
 | healthchecks            | HTTP                        | requests                                                        | ✅                          |
 | height                  | HTTP                        | requests                                                        | ✅                          |
 | hellobaton              | HTTP                        | requests                                                        | ✅                          |
@@ -397,10 +398,12 @@ the row lists both.
 | trello                  | HTTP                        | requests                                                        | ✅                          |
 | tremendous              | HTTP                        | requests                                                        | ✅                          |
 | trigger_dev             | HTTP                        | requests                                                        | ✅                          |
+| twelve_labs             | HTTP                        | requests                                                        | ✅                          |
 | twilio                  | HTTP                        | requests                                                        | ✅                          |
 | typeform                | HTTP                        | requests + `rest_source.RESTClient`                             | ✅                          |
 | ubidots                 | HTTP                        | requests                                                        | ✅                          |
 | unleash                 | HTTP                        | requests                                                        | ✅                          |
+| vantage                 | HTTP                        | requests                                                        | ✅                          |
 | vellum                  | HTTP                        | requests                                                        | ✅                          |
 | vercel                  | HTTP                        | requests                                                        | ✅                          |
 | vitally                 | HTTP                        | requests + `rest_source.RESTClient`                             | ✅                          |
@@ -588,7 +591,6 @@ doesn't conflict with concurrent PRs.
 - gusto
 - harness
 - harvey
-- hatchet
 - heap
 - helicone
 - helpscout
@@ -826,7 +828,6 @@ doesn't conflict with concurrent PRs.
 - turso
 - tvmaze
 - twelve_data
-- twelve_labs
 - twenty
 - twitter
 - twitter_ads
@@ -838,7 +839,6 @@ doesn't conflict with concurrent PRs.
 - uptick
 - us_census
 - uservoice
-- vantage
 - vapi
 - veeqo
 - vespa
