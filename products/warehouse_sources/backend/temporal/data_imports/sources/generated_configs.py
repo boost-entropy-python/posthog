@@ -3123,7 +3123,7 @@ class RepairshoprSourceConfig(config.Config):
 
 @config.config
 class ReplicateSourceConfig(config.Config):
-    pass
+    api_key: str
 
 
 @config.config
@@ -3919,7 +3919,8 @@ class UpPromoteSourceConfig(config.Config):
 
 @config.config
 class UpstashSourceConfig(config.Config):
-    pass
+    email: str
+    api_key: str
 
 
 @config.config
@@ -4138,7 +4139,7 @@ class ZapSignSourceConfig(config.Config):
 
 @config.config
 class ZapierSupportedStorageSourceConfig(config.Config):
-    pass
+    secret: str
 
 
 @config.config
