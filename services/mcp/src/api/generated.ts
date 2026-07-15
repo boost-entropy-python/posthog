@@ -12228,6 +12228,23 @@ export namespace Schemas {
       false_label?: string;
     }
 
+    export interface BranchPRMatch {
+      /** Repository the pull request belongs to, as 'owner/name'. */
+      repo: string;
+      /** Pull request number within the repository — pair with `repo` to link to it. */
+      number: number;
+      /**
+         * Pull request title, or null when the snapshot carries no title.
+         * @nullable
+         */
+      title: string | null;
+      /**
+         * Derived PR state ('open', 'closed', 'merged'), or null when the snapshot carries no state.
+         * @nullable
+         */
+      state: string | null;
+    }
+
     export interface BreakdownItem {
       label: string;
       value: string | number;
@@ -23933,7 +23950,7 @@ export namespace Schemas {
      * A single multivariate variant. Extra per-variant keys are dropped.
      */
     export interface ExperimentFlagVariant {
-      /** Unique variant key. Exactly one variant must use the key 'control' (the baseline). */
+      /** Unique variant key. The baseline defaults to the variant keyed 'control' when present, else the first variant. */
       key: string;
       /** Human-readable variant name. */
       name?: string;
@@ -23949,7 +23966,7 @@ export namespace Schemas {
      * Multivariate config for the experiment's feature flag.
      */
     export interface ExperimentFlagMultivariate {
-      /** Variant definitions. Exactly one variant key must be the literal string 'control'. */
+      /** Variant definitions (2 to 20). The baseline defaults to the variant keyed 'control' when present, else the first variant. */
       variants: ExperimentFlagVariant[];
     }
 
@@ -23980,7 +23997,7 @@ export namespace Schemas {
      * reach this validation.
      */
     export interface ExperimentFeatureFlagInput {
-      /** Flag config to apply: `multivariate.variants` (exactly one variant key must be the literal string 'control'), `groups` (a single group with `rollout_percentage` only; release conditions are not supported here, edit the feature flag directly), `aggregation_group_type_index`, and `payloads` (JSON-encoded strings keyed by variant key). On update, config this object omits is preserved from the linked flag's current state. */
+      /** Flag config to apply: `multivariate.variants` (2 to 20 variants; the baseline defaults to the variant keyed 'control' when present, else the first variant), `groups` (a single group with `rollout_percentage` only; release conditions are not supported here, edit the feature flag directly), `aggregation_group_type_index`, and `payloads` (JSON-encoded strings keyed by variant key). On update, config this object omits is preserved from the linked flag's current state. */
       filters?: ExperimentFeatureFlagFilters;
       /**
          * Whether the flag persists variant assignment across authentication steps.
@@ -26613,6 +26630,8 @@ export namespace Schemas {
       _should_create_usage_dashboard?: boolean;
       /** Check if this feature flag is used in any team's session recording linked flag setting. */
       readonly is_used_in_replay_settings: boolean;
+      /** Whether this flag can back an experiment: multivariate with 2 to 20 variants. */
+      readonly is_eligible_for_experiment: boolean;
     }
 
     export interface FeatureFlagConditionPropertyAnalysis {
@@ -35124,11 +35143,24 @@ export namespace Schemas {
       estimated_cost_usd: number | null;
     }
 
+    export interface PRLLMSpend {
+      /** Total agent LLM token cost in USD attributed to this PR (sum of $ai_total_cost_usd over the matched $ai_generation events). */
+      cost_usd: number;
+      /** Total input (prompt) tokens across the attributed generations. */
+      input_tokens: number;
+      /** Total output (completion) tokens across the attributed generations. */
+      output_tokens: number;
+      /** Number of $ai_generation events attributed to this PR by git branch ($ai_git_branch). */
+      generations: number;
+    }
+
     export interface PRCostSummary {
       /** Same spend broken down per workflow. */
       by_workflow: WorkflowCost[];
       /** Same spend broken down per workflow run, keyed by (run_id, run_attempt). */
       by_run: RunCost[];
+      /** Agent LLM token spend attributed to this PR by git branch ($ai_git_branch), or null when no generation matched — independent of the CI cost figures, so it can be present even when jobs_available is false. The UI hides the row when null. */
+      llm_spend?: PRLLMSpend | null;
       /** False when the job-level source (github_workflow_jobs) isn't synced — every figure is then zero/null and the cost cards should be hidden. */
       jobs_available: boolean;
       /** Billable CI minutes: each costed (self-hosted) job's elapsed time, summed. Parallel jobs add up, so this is compute time spent, not wall-clock run duration. */
@@ -46810,6 +46842,22 @@ export namespace Schemas {
       readonly organization_id?: string | null;
       readonly person?: TicketPerson | null;
       tags?: unknown[];
+    }
+
+    /**
+     * Saved ticket filter criteria. May contain status, priority, channel, sla, assignee, tags, dateFrom, dateTo, and sorting keys.
+     */
+    export type PatchedTicketViewFilters = { [key: string]: unknown };
+
+    export interface PatchedTicketView {
+      readonly id?: string;
+      readonly short_id?: string;
+      /** @maxLength 400 */
+      name?: string;
+      /** Saved ticket filter criteria. May contain status, priority, channel, sla, assignee, tags, dateFrom, dateTo, and sorting keys. */
+      filters?: PatchedTicketViewFilters;
+      readonly created_at?: string;
+      readonly created_by?: UserBasic;
     }
 
     /**
@@ -69915,6 +69963,25 @@ export namespace Schemas {
     source_id?: string;
     };
 
+    export type EngineeringAnalyticsResolveBranchParams = {
+    /**
+     * Git branch (the PR's head ref) to resolve. Open PRs are returned first, then most recently updated.
+     */
+    branch: string;
+    /**
+     * Optional 'owner/name' repository to narrow matching to a single repo.
+     */
+    repo?: string;
+    /**
+     * Connected GitHub data warehouse source to read from. Defaults to the oldest connected GitHub source when the team has more than one.
+     */
+    source_id?: string;
+    /**
+     * Optional ISO8601 timestamp, e.g. the trace's capture time. When a branch name has been reused across PRs over time, the PR whose lifetime window contains this moment is ranked first so the result matches the PR that was active when the trace was captured. A preference only, not a filter; omit to rank purely by open state then recency.
+     */
+    timestamp?: string;
+    };
+
     export type EngineeringAnalyticsRunFailureLogsParams = {
     /**
      * Workflow run id whose failure logs to fetch.
@@ -74315,6 +74382,10 @@ export namespace Schemas {
      * Filter reports by whether a shipped implementation pull request exists. 'true' keeps only reports with a PR; 'false' keeps only those without. Pair with limit=1 to count PR reports cheaply.
      */
     has_implementation_pr?: boolean;
+    /**
+     * When true, the list includes reports in every status with no default exclusions applied — currently that adds suppressed (dismissed) reports, which are otherwise hidden. Use it to see the full inbox state (e.g. deduplicating before creating a report) and read each row's status (plus dismissal_reason/dismissal_note on dismissed rows) before acting. Deleted reports are terminal and never returned. Defaults to false, which keeps the existing default exclusions. Ignored when an explicit 'status' filter is set — that filter alone decides which statuses are returned.
+     */
+    include_all_statuses?: boolean;
     /**
      * Number of results to return per page.
      */

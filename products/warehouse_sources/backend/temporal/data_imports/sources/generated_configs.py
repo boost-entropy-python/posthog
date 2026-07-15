@@ -186,7 +186,7 @@ class AikidoSecuritySourceConfig(config.Config):
 
 @config.config
 class AirOpsSourceConfig(config.Config):
-    pass
+    api_key: str
 
 
 @config.config
@@ -569,7 +569,7 @@ class BrowserUseSourceConfig(config.Config):
 
 @config.config
 class BrowserbaseSourceConfig(config.Config):
-    pass
+    api_key: str
 
 
 @config.config
@@ -1639,7 +1639,7 @@ class GridlySourceConfig(config.Config):
 
 @config.config
 class GroqSourceConfig(config.Config):
-    pass
+    api_key: str
 
 
 @config.config
@@ -1981,7 +1981,7 @@ class KekaSourceConfig(config.Config):
 
 @config.config
 class KernelSourceConfig(config.Config):
-    pass
+    api_key: str
 
 
 @config.config
@@ -2988,7 +2988,7 @@ class PromptingCompanySourceConfig(config.Config):
 
 @config.config
 class PyPISourceConfig(config.Config):
-    pass
+    packages: str
 
 
 @config.config
