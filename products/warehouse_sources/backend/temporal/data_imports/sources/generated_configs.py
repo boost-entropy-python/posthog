@@ -490,7 +490,7 @@ class BeamerSourceConfig(config.Config):
 
 @config.config
 class BetterStackSourceConfig(config.Config):
-    pass
+    api_token: str
 
 
 @config.config
@@ -1096,7 +1096,7 @@ class CustomerIOSourceConfig(config.Config):
 
 @config.config
 class CustomerlySourceConfig(config.Config):
-    pass
+    access_token: str
 
 
 @config.config
@@ -2216,7 +2216,9 @@ class KajabiSourceConfig(config.Config):
 
 @config.config
 class KandjiSourceConfig(config.Config):
-    pass
+    api_token: str
+    subdomain: str
+    region: Literal["us", "eu"] = config.value(default="us")
 
 
 @config.config
@@ -2276,7 +2278,9 @@ class KnockSourceConfig(config.Config):
 
 @config.config
 class KongKonnectSourceConfig(config.Config):
-    pass
+    api_token: str
+    lookback_days: int | None = config.value(converter=config.str_to_optional_int, default_factory=lambda: None)
+    region: Literal["us", "eu", "au", "me", "in", "sg"] = config.value(default="us")
 
 
 @config.config
@@ -3018,7 +3022,7 @@ class PabblySubscriptionsBillingSourceConfig(config.Config):
 
 @config.config
 class PackagistSourceConfig(config.Config):
-    pass
+    packages: str
 
 
 @config.config
@@ -3277,7 +3281,9 @@ class PostmarkSourceConfig(config.Config):
 
 @config.config
 class PrefectCloudSourceConfig(config.Config):
-    pass
+    account_id: str
+    workspace_id: str
+    api_key: str
 
 
 @config.config
@@ -3397,12 +3403,13 @@ class RampSourceConfig(config.Config):
 
 @config.config
 class Rapid7InsightvmSourceConfig(config.Config):
-    pass
+    api_key: str
+    region: Literal["us", "eu", "ca", "au", "ap", "jp"] = config.value(default="us")
 
 
 @config.config
 class RaygunSourceConfig(config.Config):
-    pass
+    personal_access_token: str
 
 
 @config.config
@@ -4587,7 +4594,9 @@ class XeroSourceConfig(config.Config):
 
 @config.config
 class XmattersSourceConfig(config.Config):
-    pass
+    subdomain: str
+    username: str
+    password: str
 
 
 @config.config
