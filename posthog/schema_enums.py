@@ -2042,6 +2042,8 @@ class ExternalDataSourceType(StrEnum):
     SHOPWARE = "Shopware"
     DUBSADO = "Dubsado"
     CAMPFIRE = "Campfire"
+    CRISP = "Crisp"
+    KOMMO = "Kommo"
 
 
 class ExternalQueryErrorCode(StrEnum):
@@ -2880,6 +2882,7 @@ class ProductIntentContext(StrEnum):
     DATA_WAREHOUSE_SOURCES_TABLE = "data warehouse sources table"
     EXPERIMENT_CREATED = "experiment created"
     EXPERIMENT_ANALYZED = "experiment analyzed"
+    EXPERIMENT_VIEW_RECORDINGS = "experiment view recordings"
     FEATURE_FLAG_CREATED = "feature flag created"
     SESSION_REPLAY_SET_FILTERS = "session_replay_set_filters"
     SESSION_REPLAY_EXPERIMENT_LINK_CLICKED = "session_replay_experiment_link_clicked"

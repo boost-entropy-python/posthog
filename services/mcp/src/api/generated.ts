@@ -8037,6 +8037,14 @@ export namespace Schemas {
       uploads: UploadTarget[];
     }
 
+    export interface AddSuppressionRequest {
+      /**
+         * The email address to suppress. Will not receive any messages until removed.
+         * @maxLength 512
+         */
+      identifier: string;
+    }
+
     /**
      * Body of POST /vision/scanners/:id/affected_cohort/. Same qualifiers as the impact GET.
      */
@@ -18417,6 +18425,8 @@ export namespace Schemas {
      * * `Dubsado` - Dubsado
      * * `Campfire` - Campfire
      * * `PromptWatch` - PromptWatch
+     * * `Crisp` - Crisp
+     * * `Kommo` - Kommo
      */
     export type ExternalDataSourceTypeEnum = typeof ExternalDataSourceTypeEnum[keyof typeof ExternalDataSourceTypeEnum];
 
@@ -19280,6 +19290,8 @@ export namespace Schemas {
       Dubsado: 'Dubsado',
       Campfire: 'Campfire',
       PromptWatch: 'PromptWatch',
+      Crisp: 'Crisp',
+      Kommo: 'Kommo',
     } as const;
 
     /**
@@ -20156,7 +20168,9 @@ export namespace Schemas {
        * * `Shopware` - Shopware
        * * `Dubsado` - Dubsado
        * * `Campfire` - Campfire
-       * * `PromptWatch` - PromptWatch */
+       * * `PromptWatch` - PromptWatch
+       * * `Crisp` - Crisp
+       * * `Kommo` - Kommo */
       source_type: ExternalDataSourceTypeEnum;
     }
 
@@ -27011,7 +27025,9 @@ export namespace Schemas {
        * * `Shopware` - Shopware
        * * `Dubsado` - Dubsado
        * * `Campfire` - Campfire
-       * * `PromptWatch` - PromptWatch */
+       * * `PromptWatch` - PromptWatch
+       * * `Crisp` - Crisp
+       * * `Kommo` - Kommo */
       readonly source_type: ExternalDataSourceTypeEnum;
       /** 'direct' for pure live-query sources; 'warehouse' for synced sources with direct query enabled.
        *
@@ -27901,7 +27917,9 @@ export namespace Schemas {
        * * `Shopware` - Shopware
        * * `Dubsado` - Dubsado
        * * `Campfire` - Campfire
-       * * `PromptWatch` - PromptWatch */
+       * * `PromptWatch` - PromptWatch
+       * * `Crisp` - Crisp
+       * * `Kommo` - Kommo */
       source_type: ExternalDataSourceTypeEnum;
       /** Connection credentials and a 'schemas' array. Keys depend on source_type. */
       payload: ExternalDataSourceCreatePayload;
@@ -35626,6 +35644,58 @@ export namespace Schemas {
     }
 
     /**
+     * * `BOUNCE` - Bounce
+     * * `MANUAL` - Manual
+     */
+    export type MessageSuppressionSourceEnum = typeof MessageSuppressionSourceEnum[keyof typeof MessageSuppressionSourceEnum];
+
+
+    export const MessageSuppressionSourceEnum = {
+      Bounce: 'BOUNCE',
+      Manual: 'MANUAL',
+    } as const;
+
+    export interface MessageSuppression {
+      /** Server-assigned UUID for this suppression entry. */
+      readonly id: string;
+      /** Normalized recipient email address. Suppression is keyed on this value, per team. */
+      readonly identifier: string;
+      /** How the entry landed on the list: `BOUNCE` for automatic (bounce-driven), `MANUAL` for user-added via the UI/API.
+       *
+       * * `BOUNCE` - Bounce
+       * * `MANUAL` - Manual */
+      readonly source: MessageSuppressionSourceEnum;
+      /**
+         * Human-readable reason for the suppression (e.g. 'Auto-suppressed after 5 consecutive soft bounces').
+         * @nullable
+         */
+      readonly reason: string | null;
+      /** Rolling count of consecutive soft bounces with no successful delivery in between. Reset to 0 on any successful delivery. Ignored for MANUAL entries. */
+      readonly transient_bounce_count: number;
+      /**
+         * Timestamp of the most recent bounce, if any.
+         * @nullable
+         */
+      readonly last_bounce_at: string | null;
+      /**
+         * SMTP diagnostic string from the most recent bounce (e.g. '550 5.1.1 user unknown'), kept for visibility.
+         * @nullable
+         */
+      readonly last_bounce_diagnostic: string | null;
+      /** Whether the address is actively suppressed. A BOUNCE row can exist while still only counting bounces (suppressed=false) before it crosses the threshold. */
+      readonly suppressed: boolean;
+      /**
+         * Timestamp when the address was first suppressed.
+         * @nullable
+         */
+      readonly suppressed_at: string | null;
+      /** When the row was first created (first bounce or manual add). */
+      readonly created_at: string;
+      /** When the row was last touched by any write. */
+      readonly updated_at: string;
+    }
+
+    /**
      * * `liquid` - liquid
      */
     export type MessageTemplateContentTemplatingEnum = typeof MessageTemplateContentTemplatingEnum[keyof typeof MessageTemplateContentTemplatingEnum];
@@ -38119,6 +38189,27 @@ export namespace Schemas {
       /** @nullable */
       previous?: string | null;
       results: MessageCategory[];
+    }
+
+    /**
+     * OpenAPI shape for the paginated suppressions response. Declared so drf-spectacular emits
+     * the {count, next, previous, results} envelope on the generated client, rather than a bare
+     * array — which the frontend actually receives at runtime.
+     */
+    export interface PaginatedMessageSuppression {
+      /** Total number of suppressed recipients for the team. */
+      count: number;
+      /**
+         * URL for the next page, or null on the last page.
+         * @nullable
+         */
+      next: string | null;
+      /**
+         * URL for the previous page, or null on the first page.
+         * @nullable
+         */
+      previous: string | null;
+      results: MessageSuppression[];
     }
 
     export interface PaginatedMessageTemplateList {
@@ -58182,7 +58273,9 @@ export namespace Schemas {
        * * `Shopware` - Shopware
        * * `Dubsado` - Dubsado
        * * `Campfire` - Campfire
-       * * `PromptWatch` - PromptWatch */
+       * * `PromptWatch` - PromptWatch
+       * * `Crisp` - Crisp
+       * * `Kommo` - Kommo */
       source_type: ExternalDataSourceTypeEnum;
       /** Connection details as flat keys for the source_type — the same fields the create flow accepts (host, port, password, API key, …). Checked against a live connection before being stored. */
       payload: SourceCredentialCreatePayload;
@@ -59085,7 +59178,9 @@ export namespace Schemas {
        * * `Shopware` - Shopware
        * * `Dubsado` - Dubsado
        * * `Campfire` - Campfire
-       * * `PromptWatch` - PromptWatch */
+       * * `PromptWatch` - PromptWatch
+       * * `Crisp` - Crisp
+       * * `Kommo` - Kommo */
       source_type: ExternalDataSourceTypeEnum;
       /** Source config as flat keys. For source_type 'Custom': 'manifest_json' (a stringified RESTAPIConfig describing client.base_url, auth, and resources) plus the credential for the manifest's declared auth type — 'auth_token' (bearer), 'auth_api_key' (api_key), or 'auth_password' (http_basic). Secrets stay in these auth_* keys, never inline in the manifest. */
       payload?: SourcePreviewRequestPayload;
@@ -59980,7 +60075,9 @@ export namespace Schemas {
        * * `Shopware` - Shopware
        * * `Dubsado` - Dubsado
        * * `Campfire` - Campfire
-       * * `PromptWatch` - PromptWatch */
+       * * `PromptWatch` - PromptWatch
+       * * `Crisp` - Crisp
+       * * `Kommo` - Kommo */
       source_type: ExternalDataSourceTypeEnum;
       /** Connection details as flat keys for the source_type (discover required fields with the wizard tool). Prefer references over raw secrets: pass {'credential_id': <id>} referencing the connection details the user stored via the connect-link page (discover ids with the stored_credentials endpoint) — they are merged in server-side and deleted once consumed. An already-connected OAuth integration can be passed via its id key instead (e.g. {'hubspot_integration_id': 123}). For source_type 'Custom' (a user-defined REST API) the keys are 'manifest_json' (a stringified RESTAPIConfig describing client.base_url, auth, and resources) plus the credential for the auth type the manifest declares — 'auth_token' (bearer), 'auth_api_key' (api_key), or 'auth_password' (http_basic); keep secrets in these auth_* keys, never inline in the manifest. A 'schemas' array is NOT required — all discovered tables are enabled automatically with sensible sync defaults. */
       payload?: SourceSetupPayload;
@@ -71186,6 +71283,7 @@ export namespace Schemas {
      * * `ExternalDataSource` - ExternalDataSource
      * * `ExternalDataSchema` - ExternalDataSchema
      * * `Evaluation` - Evaluation
+     * * `LLMPromptLabel` - LLMPromptLabel
      * * `LLMTrace` - LLMTrace
      * * `AIGatewayCredit` - AIGatewayCredit
      * * `WebAnalyticsFilterPreset` - WebAnalyticsFilterPreset
@@ -71274,6 +71372,7 @@ export namespace Schemas {
       ExternalDataSource: 'ExternalDataSource',
       ExternalDataSchema: 'ExternalDataSchema',
       Evaluation: 'Evaluation',
+      LLMPromptLabel: 'LLMPromptLabel',
       LLMTrace: 'LLMTrace',
       AIGatewayCredit: 'AIGatewayCredit',
       WebAnalyticsFilterPreset: 'WebAnalyticsFilterPreset',
@@ -71348,6 +71447,7 @@ export namespace Schemas {
      * * `ExternalDataSource` - ExternalDataSource
      * * `ExternalDataSchema` - ExternalDataSchema
      * * `Evaluation` - Evaluation
+     * * `LLMPromptLabel` - LLMPromptLabel
      * * `LLMTrace` - LLMTrace
      * * `AIGatewayCredit` - AIGatewayCredit
      * * `WebAnalyticsFilterPreset` - WebAnalyticsFilterPreset
@@ -71424,6 +71524,7 @@ export namespace Schemas {
       ExternalDataSource: 'ExternalDataSource',
       ExternalDataSchema: 'ExternalDataSchema',
       Evaluation: 'Evaluation',
+      LLMPromptLabel: 'LLMPromptLabel',
       LLMTrace: 'LLMTrace',
       AIGatewayCredit: 'AIGatewayCredit',
       WebAnalyticsFilterPreset: 'WebAnalyticsFilterPreset',
@@ -77019,6 +77120,11 @@ export namespace Schemas {
      * The initial index from which to return the results.
      */
     offset?: number;
+    };
+
+    export type MessagingSuppressionsSuppressionsRetrieveParams = {
+    page?: number;
+    page_size?: number;
     };
 
     export type MessagingTemplatesListParams = {
