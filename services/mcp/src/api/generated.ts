@@ -2277,6 +2277,15 @@ export namespace Schemas {
       readonly item_id: string;
       detail?: Detail;
       readonly created_at: string;
+      /** Whether the activity was performed by the system rather than a user. */
+      readonly is_system: boolean;
+      /** Whether the acting user was being impersonated by PostHog staff. */
+      readonly was_impersonated: boolean;
+      /**
+         * API client that triggered the activity, from the x-posthog-client request header (e.g. 'mcp'). Null for requests that did not send the header.
+         * @nullable
+         */
+      readonly client: string | null;
     }
 
     /**
@@ -26497,6 +26506,12 @@ export namespace Schemas {
          * @nullable
          */
       readonly flag_cleanup_task_id: string | null;
+      /**
+         * GitHub repository holding this experiment's feature-flag code, in `organization/repository` format. Used as the target of the flag-cleanup pull request opened via open_cleanup_pr on end/ship_variant. When not set, cleanup targets the team's only connected repository and is skipped if the team has several.
+         * @maxLength 255
+         * @nullable
+         */
+      repository?: string | null;
       primary_metrics_ordered_uuids?: unknown;
       secondary_metrics_ordered_uuids?: unknown;
       only_count_matured_users?: boolean;
@@ -27198,6 +27213,12 @@ export namespace Schemas {
          * @nullable
          */
       readonly flag_cleanup_task_id: string | null;
+      /**
+         * GitHub repository holding this experiment's feature-flag code, in `organization/repository` format. Used as the target of the flag-cleanup pull request opened via open_cleanup_pr on end/ship_variant. When not set, cleanup targets the team's only connected repository and is skipped if the team has several.
+         * @maxLength 255
+         * @nullable
+         */
+      repository?: string | null;
       primary_metrics_ordered_uuids?: unknown;
       secondary_metrics_ordered_uuids?: unknown;
       only_count_matured_users?: boolean;
@@ -36362,6 +36383,8 @@ export namespace Schemas {
       metadata?: LLMSkillMetadata;
       /** Server-owned classification — set by the producing system (the Signals harness stamps "scout"), not writable via the API. Empty for an ordinary skill. Groups skills into their own surface (e.g. the Scouts tab) independently of the skill name. */
       readonly category: string;
+      /** Users who own this skill, seed-creator first. Ownership is keyed on the logical skill (not a version), so it's stable across edits. Prefer this over created_by to learn who to route reviews or questions to. Set via the owners field on create/update (a list of user UUIDs). Empty for scout sandbox fetches of skills that haven't opted into the report channel. */
+      readonly owners: readonly UserBasic[];
       /** Bundled files manifest. Each entry carries path, content_type, and line/char counts — no content; fetch content via /llm_skills/name/{name}/files/{path}/. */
       readonly files: readonly LLMSkillFileManifest[];
       /** Flat list of markdown headings parsed from the skill body. Useful as a lightweight table of contents. */
@@ -36398,7 +36421,7 @@ export namespace Schemas {
     }
 
     /**
-     * Create serializer — accepts bundled files as write-only input on POST.
+     * Create serializer — accepts bundled files and owners as write-only input on POST.
      */
     export interface LLMSkillCreate {
       readonly id: string;
@@ -36437,6 +36460,11 @@ export namespace Schemas {
       metadata?: LLMSkillCreateMetadata;
       /** Server-owned classification — set by the producing system (the Signals harness stamps "scout"), not writable via the API. Empty for an ordinary skill. Groups skills into their own surface (e.g. the Scouts tab) independently of the skill name. */
       readonly category: string;
+      /**
+         * User UUIDs to set as the skill's owners. Each must be a member of this project. Defaults to the creating user when omitted; pass an empty list to create with no owners.
+         * @maxItems 25
+         */
+      owners?: string[];
       /** Bundled files to include with the initial version (scripts, references, assets). */
       files?: LLMSkillFileInput[];
       /** Flat list of markdown headings parsed from the skill body. Useful as a lightweight table of contents. */
@@ -36564,6 +36592,8 @@ export namespace Schemas {
       metadata?: LLMSkillListMetadata;
       /** Server-owned classification — set by the producing system (the Signals harness stamps "scout"), not writable via the API. Empty for an ordinary skill. Groups skills into their own surface (e.g. the Scouts tab) independently of the skill name. */
       readonly category: string;
+      /** Users who own this skill, seed-creator first. Ownership is keyed on the logical skill (not a version), so it's stable across edits. Prefer this over created_by to learn who to route reviews or questions to. Set via the owners field on create/update (a list of user UUIDs). Empty for scout sandbox fetches of skills that haven't opted into the report channel. */
+      readonly owners: readonly UserBasic[];
       /** Flat list of markdown headings parsed from the skill body. Useful as a lightweight table of contents. */
       readonly outline: readonly LLMSkillOutlineEntry[];
       readonly version: number;
@@ -48051,6 +48081,12 @@ export namespace Schemas {
          * @nullable
          */
       readonly flag_cleanup_task_id?: string | null;
+      /**
+         * GitHub repository holding this experiment's feature-flag code, in `organization/repository` format. Used as the target of the flag-cleanup pull request opened via open_cleanup_pr on end/ship_variant. When not set, cleanup targets the team's only connected repository and is skipped if the team has several.
+         * @maxLength 255
+         * @nullable
+         */
+      repository?: string | null;
       primary_metrics_ordered_uuids?: unknown;
       secondary_metrics_ordered_uuids?: unknown;
       only_count_matured_users?: boolean;
@@ -49167,7 +49203,12 @@ export namespace Schemas {
       /** Per-file find/replace updates. Each entry targets one existing file by path and applies sequential edits to its content. Non-targeted files carry forward unchanged. Cannot add, remove, or rename files — use 'files' for that. Mutually exclusive with files. */
       file_edits?: LLMSkillFileEdit[];
       /**
-         * Latest version you are editing from. Used for optimistic concurrency checks.
+         * Replace the skill's owners with these user UUIDs (each a member of this project). Omit to leave owners unchanged; pass an empty list to clear them. Owners are keyed on the logical skill, so setting them is independent of the version being published — a body edit alone never changes ownership.
+         * @maxItems 25
+         */
+      owners?: string[];
+      /**
+         * Latest version you are editing from. Used for optimistic concurrency checks. Required when publishing content changes; optional for an owner-only update (when omitted, owners are replaced without a concurrency check).
          * @minimum 1
          */
       base_version?: number;
@@ -71747,6 +71788,7 @@ export namespace Schemas {
      * * `ExternalDataSource` - ExternalDataSource
      * * `ExternalDataSchema` - ExternalDataSchema
      * * `Evaluation` - Evaluation
+     * * `LLMPrompt` - LLMPrompt
      * * `LLMPromptLabel` - LLMPromptLabel
      * * `LLMTrace` - LLMTrace
      * * `AIGatewayCredit` - AIGatewayCredit
@@ -71837,6 +71879,7 @@ export namespace Schemas {
       ExternalDataSource: 'ExternalDataSource',
       ExternalDataSchema: 'ExternalDataSchema',
       Evaluation: 'Evaluation',
+      LLMPrompt: 'LLMPrompt',
       LLMPromptLabel: 'LLMPromptLabel',
       LLMTrace: 'LLMTrace',
       AIGatewayCredit: 'AIGatewayCredit',
@@ -71913,6 +71956,7 @@ export namespace Schemas {
      * * `ExternalDataSource` - ExternalDataSource
      * * `ExternalDataSchema` - ExternalDataSchema
      * * `Evaluation` - Evaluation
+     * * `LLMPrompt` - LLMPrompt
      * * `LLMPromptLabel` - LLMPromptLabel
      * * `LLMTrace` - LLMTrace
      * * `AIGatewayCredit` - AIGatewayCredit
@@ -71991,6 +72035,7 @@ export namespace Schemas {
       ExternalDataSource: 'ExternalDataSource',
       ExternalDataSchema: 'ExternalDataSchema',
       Evaluation: 'Evaluation',
+      LLMPrompt: 'LLMPrompt',
       LLMPromptLabel: 'LLMPromptLabel',
       LLMTrace: 'LLMTrace',
       AIGatewayCredit: 'AIGatewayCredit',
@@ -72731,6 +72776,10 @@ export namespace Schemas {
      * Comma-separated list of person `distinct_id`s to filter by (max 100).
      */
     distinct_ids?: string;
+    /**
+     * Comma-separated list of email addresses to filter by, matched case-insensitively against `email_from` (max 100). When combined with `distinct_ids`, tickets matching either the distinct_ids or the emails are returned (OR).
+     */
+    emails?: string;
     /**
      * Number of results to return per page.
      */
@@ -74722,6 +74771,19 @@ export namespace Schemas {
       Running: 'running',
       Stopped: 'stopped',
     } as const;
+
+    export type ExperimentsActivityRetrieveParams = {
+    /**
+     * Number of items per page
+     * @minimum 1
+     */
+    limit?: number;
+    /**
+     * Page number
+     * @minimum 1
+     */
+    page?: number;
+    };
 
     export type ExperimentsTimeseriesResultsRetrieveParams = {
     /**
