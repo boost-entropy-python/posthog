@@ -4553,6 +4553,8 @@ export namespace Schemas {
     }
 
     export interface ActorsQuery {
+      /** Exclude persons matching the team's "internal and test account" filters. Only person-scoped filters (person properties, cohorts) are applied. Event-scoped test account filters have no meaning in a persons query and are ignored. */
+      filterTestAccounts?: boolean | null;
       /** Currently only person filters supported. No filters for querying groups. See `filter_conditions()` in actor_strategies.py. */
       fixedProperties?: (PersonPropertyFilter | PersonMetadataPropertyFilter | CohortPropertyFilter | HogQLPropertyFilter | EmptyPropertyFilter)[] | null;
       kind?: 'ActorsQuery';
@@ -13949,6 +13951,7 @@ export namespace Schemas {
 
     export interface CohortFilters {
       properties: CohortFilterGroup;
+      filterTestAccounts?: boolean | null;
     }
 
     /**
@@ -31350,6 +31353,13 @@ export namespace Schemas {
       Error: 'error',
     } as const;
 
+    export interface FacetCount {
+      /** The facet value as emitted by the summarizer (lowercased). */
+      term: string;
+      /** Number of succeeded observations that emitted this value. */
+      count: number;
+    }
+
     /**
      * * `severity_text` - severity_text
      * * `service_name` - service_name
@@ -33754,6 +33764,7 @@ export namespace Schemas {
      * * `warehouse_source_webhook` - Warehouse Source Webhook
      * * `site_app` - Site App
      * * `transformation` - Transformation
+     * * `transformation_log` - Transformation Log
      */
     export type HogFunctionTypeEnum = typeof HogFunctionTypeEnum[keyof typeof HogFunctionTypeEnum];
 
@@ -33766,6 +33777,7 @@ export namespace Schemas {
       WarehouseSourceWebhook: 'warehouse_source_webhook',
       SiteApp: 'site_app',
       Transformation: 'transformation',
+      TransformationLog: 'transformation_log',
     } as const;
 
     /**
@@ -33958,7 +33970,7 @@ export namespace Schemas {
 
     export interface HogFunction {
       readonly id: string;
-      /** Function type: destination, site_destination, internal_destination, source_webhook, warehouse_source_webhook, site_app, or transformation.
+      /** Function type: destination, site_destination, internal_destination, source_webhook, warehouse_source_webhook, site_app, transformation, or transformation_log.
        *
        * * `destination` - Destination
        * * `site_destination` - Site Destination
@@ -33966,7 +33978,8 @@ export namespace Schemas {
        * * `source_webhook` - Source Webhook
        * * `warehouse_source_webhook` - Warehouse Source Webhook
        * * `site_app` - Site App
-       * * `transformation` - Transformation */
+       * * `transformation` - Transformation
+       * * `transformation_log` - Transformation Log */
       type?: HogFunctionTypeEnum | null;
       /**
          * Display name for the function.
@@ -41022,6 +41035,15 @@ export namespace Schemas {
       histogram: ScorerHistogram | null;
     }
 
+    export interface SummarizerStats {
+      /** Top friction points by emission count. */
+      friction_ranked: FacetCount[];
+      /** Top keywords by emission count. */
+      keyword_ranked: FacetCount[];
+      /** Succeeded observations that emitted at least one friction point or keyword. */
+      total_with_facets: number;
+    }
+
     export interface ObservationStats {
       /** Counts of observations by terminal status. */
       status_counts: ObservationStatusCounts;
@@ -41037,6 +41059,8 @@ export namespace Schemas {
       classifier: ClassifierStats | null;
       /** Scorer-type aggregates; null when the scanner is not a scorer. */
       scorer: ScorerStats | null;
+      /** Summarizer-type facet aggregates; null when the scanner is not a summarizer. */
+      summarizer: SummarizerStats | null;
     }
 
     /**
@@ -46852,6 +46876,8 @@ export namespace Schemas {
       passkeys_enabled_for_2fa?: boolean | null;
       /** When true, the user has opted out of in-app hints promoting the PostHog MCP integration after taking actions. */
       hide_mcp_hints?: boolean;
+      /** Per-user UI customization, validated against the `UserUIConfiguration` schema. Currently covers sidebar section and item visibility. Send the complete object: it replaces the stored value wholesale. Null means no customization; absent keys mean the element is shown. */
+      ui_configuration?: unknown;
       /** @nullable */
       readonly onboarding_skipped_at: string | null;
       readonly onboarding_skipped_reason: OnboardingSkippedReasonEnum | null;
@@ -50143,7 +50169,7 @@ export namespace Schemas {
 
     export interface PatchedHogFunction {
       readonly id?: string;
-      /** Function type: destination, site_destination, internal_destination, source_webhook, warehouse_source_webhook, site_app, or transformation.
+      /** Function type: destination, site_destination, internal_destination, source_webhook, warehouse_source_webhook, site_app, transformation, or transformation_log.
        *
        * * `destination` - Destination
        * * `site_destination` - Site Destination
@@ -50151,7 +50177,8 @@ export namespace Schemas {
        * * `source_webhook` - Source Webhook
        * * `warehouse_source_webhook` - Warehouse Source Webhook
        * * `site_app` - Site App
-       * * `transformation` - Transformation */
+       * * `transformation` - Transformation
+       * * `transformation_log` - Transformation Log */
       type?: HogFunctionTypeEnum | null;
       /**
          * Display name for the function.
@@ -54656,6 +54683,8 @@ export namespace Schemas {
       passkeys_enabled_for_2fa?: boolean | null;
       /** When true, the user has opted out of in-app hints promoting the PostHog MCP integration after taking actions. */
       hide_mcp_hints?: boolean;
+      /** Per-user UI customization, validated against the `UserUIConfiguration` schema. Currently covers sidebar section and item visibility. Send the complete object: it replaces the stored value wholesale. Null means no customization; absent keys mean the element is shown. */
+      ui_configuration?: unknown;
       /** @nullable */
       readonly onboarding_skipped_at?: string | null;
       readonly onboarding_skipped_reason?: OnboardingSkippedReasonEnum | null;
