@@ -274,6 +274,10 @@ export namespace Schemas {
       IsNot: 'is_not',
       Icontains: 'icontains',
       NotIcontains: 'not_icontains',
+      StartsWith: 'starts_with',
+      NotStartsWith: 'not_starts_with',
+      EndsWith: 'ends_with',
+      NotEndsWith: 'not_ends_with',
       Regex: 'regex',
       NotRegex: 'not_regex',
       Gt: 'gt',
@@ -980,6 +984,10 @@ export namespace Schemas {
      * * `is_not` - is_not
      * * `icontains` - icontains
      * * `not_icontains` - not_icontains
+     * * `starts_with` - starts_with
+     * * `not_starts_with` - not_starts_with
+     * * `ends_with` - ends_with
+     * * `not_ends_with` - not_ends_with
      * * `regex` - regex
      * * `not_regex` - not_regex
      */
@@ -991,6 +999,10 @@ export namespace Schemas {
       IsNot: 'is_not',
       Icontains: 'icontains',
       NotIcontains: 'not_icontains',
+      StartsWith: 'starts_with',
+      NotStartsWith: 'not_starts_with',
+      EndsWith: 'ends_with',
+      NotEndsWith: 'not_ends_with',
       Regex: 'regex',
       NotRegex: 'not_regex',
     } as const;
@@ -1042,6 +1054,10 @@ export namespace Schemas {
        * * `is_not` - is_not
        * * `icontains` - icontains
        * * `not_icontains` - not_icontains
+       * * `starts_with` - starts_with
+       * * `not_starts_with` - not_starts_with
+       * * `ends_with` - ends_with
+       * * `not_ends_with` - not_ends_with
        * * `regex` - regex
        * * `not_regex` - not_regex */
       operator?: StringMatchOperatorEnum;
@@ -18585,6 +18601,13 @@ export namespace Schemas {
      * * `BCMS` - BCMS
      * * `Convonite` - Convonite
      * * `Hookdeck` - Hookdeck
+     * * `Billit` - Billit
+     * * `Moxie` - Moxie
+     * * `TripleWhale` - TripleWhale
+     * * `Directus` - Directus
+     * * `Clay` - Clay
+     * * `TradableBits` - TradableBits
+     * * `Swan` - Swan
      */
     export type ExternalDataSourceTypeEnum = typeof ExternalDataSourceTypeEnum[keyof typeof ExternalDataSourceTypeEnum];
 
@@ -19855,6 +19878,13 @@ export namespace Schemas {
       Bcms: 'BCMS',
       Convonite: 'Convonite',
       Hookdeck: 'Hookdeck',
+      Billit: 'Billit',
+      Moxie: 'Moxie',
+      TripleWhale: 'TripleWhale',
+      Directus: 'Directus',
+      Clay: 'Clay',
+      TradableBits: 'TradableBits',
+      Swan: 'Swan',
     } as const;
 
     /**
@@ -21138,7 +21168,14 @@ export namespace Schemas {
        * * `Inth` - Inth
        * * `BCMS` - BCMS
        * * `Convonite` - Convonite
-       * * `Hookdeck` - Hookdeck */
+       * * `Hookdeck` - Hookdeck
+       * * `Billit` - Billit
+       * * `Moxie` - Moxie
+       * * `TripleWhale` - TripleWhale
+       * * `Directus` - Directus
+       * * `Clay` - Clay
+       * * `TradableBits` - TradableBits
+       * * `Swan` - Swan */
       source_type: ExternalDataSourceTypeEnum;
     }
 
@@ -22856,7 +22893,14 @@ export namespace Schemas {
        * * `Inth` - Inth
        * * `BCMS` - BCMS
        * * `Convonite` - Convonite
-       * * `Hookdeck` - Hookdeck */
+       * * `Hookdeck` - Hookdeck
+       * * `Billit` - Billit
+       * * `Moxie` - Moxie
+       * * `TripleWhale` - TripleWhale
+       * * `Directus` - Directus
+       * * `Clay` - Clay
+       * * `TradableBits` - TradableBits
+       * * `Swan` - Swan */
       readonly source_type: ExternalDataSourceTypeEnum;
       /** Human-readable name to show in the picker (falls back to the source type). */
       readonly label: string;
@@ -24949,6 +24993,10 @@ export namespace Schemas {
      * * `is_not` - is_not
      * * `icontains` - icontains
      * * `not_icontains` - not_icontains
+     * * `starts_with` - starts_with
+     * * `not_starts_with` - not_starts_with
+     * * `ends_with` - ends_with
+     * * `not_ends_with` - not_ends_with
      * * `regex` - regex
      * * `not_regex` - not_regex
      * * `gt` - gt
@@ -24971,6 +25019,10 @@ export namespace Schemas {
       IsNot: 'is_not',
       Icontains: 'icontains',
       NotIcontains: 'not_icontains',
+      StartsWith: 'starts_with',
+      NotStartsWith: 'not_starts_with',
+      EndsWith: 'ends_with',
+      NotEndsWith: 'not_ends_with',
       Regex: 'regex',
       NotRegex: 'not_regex',
       Gt: 'gt',
@@ -26896,6 +26948,10 @@ export namespace Schemas {
      * * `is_not` - is_not
      * * `icontains` - icontains
      * * `not_icontains` - not_icontains
+     * * `starts_with` - starts_with
+     * * `not_starts_with` - not_starts_with
+     * * `ends_with` - ends_with
+     * * `not_ends_with` - not_ends_with
      * * `regex` - regex
      * * `not_regex` - not_regex
      * * `gt` - gt
@@ -26911,6 +26967,10 @@ export namespace Schemas {
       IsNot: 'is_not',
       Icontains: 'icontains',
       NotIcontains: 'not_icontains',
+      StartsWith: 'starts_with',
+      NotStartsWith: 'not_starts_with',
+      EndsWith: 'ends_with',
+      NotEndsWith: 'not_ends_with',
       Regex: 'regex',
       NotRegex: 'not_regex',
       Gt: 'gt',
@@ -26946,6 +27006,10 @@ export namespace Schemas {
        * * `is_not` - is_not
        * * `icontains` - icontains
        * * `not_icontains` - not_icontains
+       * * `starts_with` - starts_with
+       * * `not_starts_with` - not_starts_with
+       * * `ends_with` - ends_with
+       * * `not_ends_with` - not_ends_with
        * * `regex` - regex
        * * `not_regex` - not_regex
        * * `gt` - gt
@@ -28609,6 +28673,9 @@ export namespace Schemas {
       default_version: string;
     }
 
+    /**
+     * A schema of an external data source: its sync configuration and the warehouse table it syncs into.
+     */
     export interface ExternalDataSchema {
       readonly id: string;
       readonly name: string;
@@ -28714,6 +28781,11 @@ export namespace Schemas {
       api_version?: string | null;
       /** Set when this schema's version override is deprecated by the vendor; null when there is no override or it is not deprecated. The source-level field covers the source pin. */
       readonly api_version_deprecation: ExternalDataSourceApiVersionDeprecation | null;
+      /**
+         * The effective access level the user has for this object
+         * @nullable
+         */
+      readonly user_access_level: string | null;
     }
 
     export type ExternalDataSourceBulkUpdateSchemaRowFiltersItem = {
@@ -30057,7 +30129,14 @@ export namespace Schemas {
        * * `Inth` - Inth
        * * `BCMS` - BCMS
        * * `Convonite` - Convonite
-       * * `Hookdeck` - Hookdeck */
+       * * `Hookdeck` - Hookdeck
+       * * `Billit` - Billit
+       * * `Moxie` - Moxie
+       * * `TripleWhale` - TripleWhale
+       * * `Directus` - Directus
+       * * `Clay` - Clay
+       * * `TradableBits` - TradableBits
+       * * `Swan` - Swan */
       readonly source_type: ExternalDataSourceTypeEnum;
       /** 'direct' for pure live-query sources; 'warehouse' for synced sources with direct query enabled.
        *
@@ -31359,7 +31438,14 @@ export namespace Schemas {
        * * `Inth` - Inth
        * * `BCMS` - BCMS
        * * `Convonite` - Convonite
-       * * `Hookdeck` - Hookdeck */
+       * * `Hookdeck` - Hookdeck
+       * * `Billit` - Billit
+       * * `Moxie` - Moxie
+       * * `TripleWhale` - TripleWhale
+       * * `Directus` - Directus
+       * * `Clay` - Clay
+       * * `TradableBits` - TradableBits
+       * * `Swan` - Swan */
       source_type: ExternalDataSourceTypeEnum;
       /** Connection credentials and a 'schemas' array. Keys depend on source_type. */
       payload: ExternalDataSourceCreatePayload;
@@ -49748,6 +49834,9 @@ export namespace Schemas {
       readonly supported_api_versions?: string[];
     } | null;
 
+    /**
+     * A schema of an external data source: its sync configuration and the warehouse table it syncs into.
+     */
     export interface PatchedExternalDataSchema {
       readonly id?: string;
       readonly name?: string;
@@ -49853,6 +49942,11 @@ export namespace Schemas {
       api_version?: string | null;
       /** Set when this schema's version override is deprecated by the vendor; null when there is no override or it is not deprecated. The source-level field covers the source pin. */
       readonly api_version_deprecation?: ExternalDataSourceApiVersionDeprecation | null;
+      /**
+         * The effective access level the user has for this object
+         * @nullable
+         */
+      readonly user_access_level?: string | null;
     }
 
     export interface PatchedExternalDataSourceBulkUpdateSchemas {
@@ -53218,7 +53312,7 @@ export namespace Schemas {
      * Editable schedule, enablement, and emit posture for one scout config.
      */
     export interface PatchedSignalScoutConfigUpdate {
-      /** Whether this scout runs on its schedule. Disabled scouts are skipped by the coordinator. */
+      /** Whether this scout runs on its schedule. Disabled scouts are skipped by the coordinator. Turning this off records a user pause (`status` becomes `paused_by_user`, which the system never overrides); turning it on resumes the scout from any pause. Only a change of value is a lifecycle action: re-sending the current value leaves the existing status and its ownership untouched. */
       enabled?: boolean;
       /** Whether the scout writes findings to the inbox. False = dry-run: it runs and logs but emits nothing. */
       emit?: boolean;
@@ -53714,6 +53808,26 @@ export namespace Schemas {
 
     export type SurveyQuestionInputSchema = SurveyOpenQuestionSchema | SurveyLinkQuestionSchema | SurveyRatingQuestionSchema | SurveySingleChoiceQuestionSchema | SurveyMultipleChoiceQuestionSchema;
 
+    /**
+     * * `regex` - regex
+     * * `not_regex` - not_regex
+     * * `exact` - exact
+     * * `is_not` - is_not
+     * * `icontains` - icontains
+     * * `not_icontains` - not_icontains
+     */
+    export type SurveyMatchTypeEnum = typeof SurveyMatchTypeEnum[keyof typeof SurveyMatchTypeEnum];
+
+
+    export const SurveyMatchTypeEnum = {
+      Regex: 'regex',
+      NotRegex: 'not_regex',
+      Exact: 'exact',
+      IsNot: 'is_not',
+      Icontains: 'icontains',
+      NotIcontains: 'not_icontains',
+    } as const;
+
     export interface SurveyConditionEventValueSchema {
       /** Event name that triggers the survey. */
       name: string;
@@ -53742,7 +53856,7 @@ export namespace Schemas {
        * * `is_not` - is_not
        * * `icontains` - icontains
        * * `not_icontains` - not_icontains */
-      urlMatchType?: StringMatchOperatorEnum;
+      urlMatchType?: SurveyMatchTypeEnum;
       events?: SurveyEventsConditionSchema;
       /** Device types that should match for this survey to be shown. */
       deviceTypes?: DeviceTypesEnum[];
@@ -53754,7 +53868,7 @@ export namespace Schemas {
        * * `is_not` - is_not
        * * `icontains` - icontains
        * * `not_icontains` - not_icontains */
-      deviceTypesMatchType?: StringMatchOperatorEnum;
+      deviceTypesMatchType?: SurveyMatchTypeEnum;
       /** The variant of the feature flag linked to this survey. */
       linkedFlagVariant?: string;
     }
@@ -56606,10 +56720,15 @@ export namespace Schemas {
          */
       last_emitted_at: string | null;
       /**
-         * Why this scout is in the `disabled` bucket: `turned_off` (an operator set it off) or `skill_unavailable` (left on, but its skill was deleted, superseded, or withheld, so it never dispatches). Null for scouts that actually run.
+         * Why this scout is in the `disabled` bucket: `turned_off` (a person or seed posture set it off), `auto_paused` (the system paused it), or `skill_unavailable` (left on, but its skill was deleted, superseded, or withheld, so it never dispatches). Null for scouts that actually run.
          * @nullable
          */
       not_running_reason: string | null;
+      /**
+         * The cause behind an `auto_paused` entry: `no_output`, `ignored`, or `repeated_failures`. Null for every other entry.
+         * @nullable
+         */
+      pause_reason: string | null;
     }
 
     /**
@@ -61997,6 +62116,36 @@ export namespace Schemas {
     }
 
     /**
+     * * `no_output` - No output
+     * * `ignored` - Ignored
+     * * `repeated_failures` - Repeated failures
+     */
+    export type ScoutConfigPauseReasonEnum = typeof ScoutConfigPauseReasonEnum[keyof typeof ScoutConfigPauseReasonEnum];
+
+
+    export const ScoutConfigPauseReasonEnum = {
+      NoOutput: 'no_output',
+      Ignored: 'ignored',
+      RepeatedFailures: 'repeated_failures',
+    } as const;
+
+    /**
+     * * `active` - Active
+     * * `pending_pause` - Pending pause
+     * * `paused_by_system` - Paused by system
+     * * `paused_by_user` - Paused by user
+     */
+    export type ScoutConfigStatusEnum = typeof ScoutConfigStatusEnum[keyof typeof ScoutConfigStatusEnum];
+
+
+    export const ScoutConfigStatusEnum = {
+      Active: 'active',
+      PendingPause: 'pending_pause',
+      PausedBySystem: 'paused_by_system',
+      PausedByUser: 'paused_by_user',
+    } as const;
+
+    /**
      * One finding the run emitted, paired with the inbox report (if any) its signal grouped into.
      *
      * Best-effort reverse of the report -> signals link: `report` is null when the finding hasn't
@@ -62710,8 +62859,21 @@ export namespace Schemas {
       readonly description: string;
       /** Where this scout came from: `canonical` for a scout PostHog ships and maintains (seeded from `products/signals/skills/`), or `custom` for one a team hand-authored on this project. Use it to badge built-in vs custom scouts instead of a hardcoded name list. Defaults to `custom` if the skill is not currently present on the team. */
       readonly scout_origin: ScoutOriginEnum;
-      /** Whether this scout runs on its schedule. Disabled scouts are skipped by the coordinator. */
+      /** Whether this scout runs on its schedule. Disabled scouts are skipped by the coordinator. Derived from `status`: true for `active` and `pending_pause`, false for the paused statuses. */
       readonly enabled: boolean;
+      /** Lifecycle status. `active`: runs on its schedule. `pending_pause`: still running, but flagged by the system to pause soon unless something changes (any config edit clears it). `paused_by_system`: paused automatically, see `pause_reason`; set `enabled=true` to resume. `paused_by_user`: switched off by a person and never resumed automatically.
+       *
+       * * `active` - Active
+       * * `pending_pause` - Pending pause
+       * * `paused_by_system` - Paused by system
+       * * `paused_by_user` - Paused by user */
+      readonly status: ScoutConfigStatusEnum;
+      /** Why the system paused (or warned) this scout: `no_output` (it emitted nothing over the evaluation window), `ignored` (its output received no human engagement), or `repeated_failures` (consecutive failed runs). Null unless `status` is `pending_pause` or `paused_by_system`.
+       *
+       * * `no_output` - No output
+       * * `ignored` - Ignored
+       * * `repeated_failures` - Repeated failures */
+      readonly pause_reason: ScoutConfigPauseReasonEnum | null;
       /** Whether the scout writes findings to the inbox. False = dry-run: it runs and logs but emits nothing. */
       readonly emit: boolean;
       /**
@@ -64644,7 +64806,14 @@ export namespace Schemas {
        * * `Inth` - Inth
        * * `BCMS` - BCMS
        * * `Convonite` - Convonite
-       * * `Hookdeck` - Hookdeck */
+       * * `Hookdeck` - Hookdeck
+       * * `Billit` - Billit
+       * * `Moxie` - Moxie
+       * * `TripleWhale` - TripleWhale
+       * * `Directus` - Directus
+       * * `Clay` - Clay
+       * * `TradableBits` - TradableBits
+       * * `Swan` - Swan */
       source_type: ExternalDataSourceTypeEnum;
       /** Connection details as flat keys for the source_type — the same fields the create flow accepts (host, port, password, API key, …). Checked against a live connection before being stored. */
       payload: SourceCredentialCreatePayload;
@@ -65954,7 +66123,14 @@ export namespace Schemas {
        * * `Inth` - Inth
        * * `BCMS` - BCMS
        * * `Convonite` - Convonite
-       * * `Hookdeck` - Hookdeck */
+       * * `Hookdeck` - Hookdeck
+       * * `Billit` - Billit
+       * * `Moxie` - Moxie
+       * * `TripleWhale` - TripleWhale
+       * * `Directus` - Directus
+       * * `Clay` - Clay
+       * * `TradableBits` - TradableBits
+       * * `Swan` - Swan */
       source_type: ExternalDataSourceTypeEnum;
       /** Source config as flat keys. For source_type 'Custom': 'manifest_json' (a stringified RESTAPIConfig describing client.base_url, auth, and resources) plus the credential for the manifest's declared auth type — 'auth_token' (bearer), 'auth_api_key' (api_key), or 'auth_password' (http_basic). Secrets stay in these auth_* keys, never inline in the manifest. */
       payload?: SourcePreviewRequestPayload;
@@ -67256,7 +67432,14 @@ export namespace Schemas {
        * * `Inth` - Inth
        * * `BCMS` - BCMS
        * * `Convonite` - Convonite
-       * * `Hookdeck` - Hookdeck */
+       * * `Hookdeck` - Hookdeck
+       * * `Billit` - Billit
+       * * `Moxie` - Moxie
+       * * `TripleWhale` - TripleWhale
+       * * `Directus` - Directus
+       * * `Clay` - Clay
+       * * `TradableBits` - TradableBits
+       * * `Swan` - Swan */
       source_type: ExternalDataSourceTypeEnum;
       /** Connection details as flat keys for the source_type (discover required fields with the wizard tool). Prefer references over raw secrets: pass {'credential_id': <id>} referencing the connection details the user stored via the connect-link page (discover ids with the stored_credentials endpoint) — they are merged in server-side and deleted once consumed. An already-connected OAuth integration can be passed via its id key instead (e.g. {'hubspot_integration_id': 123}). For source_type 'Custom' (a user-defined REST API) the keys are 'manifest_json' (a stringified RESTAPIConfig describing client.base_url, auth, and resources) plus the credential for the auth type the manifest declares — 'auth_token' (bearer), 'auth_api_key' (api_key), or 'auth_password' (http_basic); keep secrets in these auth_* keys, never inline in the manifest. A 'schemas' array is NOT required — all discovered tables are enabled automatically with sensible sync defaults. */
       payload?: SourceSetupPayload;
@@ -71750,6 +71933,10 @@ export namespace Schemas {
      * * `is_not` - is_not
      * * `icontains` - icontains
      * * `not_icontains` - not_icontains
+     * * `starts_with` - starts_with
+     * * `not_starts_with` - not_starts_with
+     * * `ends_with` - ends_with
+     * * `not_ends_with` - not_ends_with
      * * `regex` - regex
      * * `not_regex` - not_regex
      * * `gt` - gt
@@ -71768,6 +71955,10 @@ export namespace Schemas {
       IsNot: 'is_not',
       Icontains: 'icontains',
       NotIcontains: 'not_icontains',
+      StartsWith: 'starts_with',
+      NotStartsWith: 'not_starts_with',
+      EndsWith: 'ends_with',
+      NotEndsWith: 'not_ends_with',
       Regex: 'regex',
       NotRegex: 'not_regex',
       Gt: 'gt',
@@ -71794,6 +71985,10 @@ export namespace Schemas {
        * * `is_not` - is_not
        * * `icontains` - icontains
        * * `not_icontains` - not_icontains
+       * * `starts_with` - starts_with
+       * * `not_starts_with` - not_starts_with
+       * * `ends_with` - ends_with
+       * * `not_ends_with` - not_ends_with
        * * `regex` - regex
        * * `not_regex` - not_regex
        * * `gt` - gt
@@ -72643,6 +72838,10 @@ export namespace Schemas {
      * * `is_not` - is_not
      * * `icontains` - icontains
      * * `not_icontains` - not_icontains
+     * * `starts_with` - starts_with
+     * * `not_starts_with` - not_starts_with
+     * * `ends_with` - ends_with
+     * * `not_ends_with` - not_ends_with
      * * `regex` - regex
      * * `not_regex` - not_regex
      * * `gt` - gt
@@ -72658,6 +72857,10 @@ export namespace Schemas {
       IsNot: 'is_not',
       Icontains: 'icontains',
       NotIcontains: 'not_icontains',
+      StartsWith: 'starts_with',
+      NotStartsWith: 'not_starts_with',
+      EndsWith: 'ends_with',
+      NotEndsWith: 'not_ends_with',
       Regex: 'regex',
       NotRegex: 'not_regex',
       Gt: 'gt',
@@ -72681,6 +72884,10 @@ export namespace Schemas {
        * * `is_not` - is_not
        * * `icontains` - icontains
        * * `not_icontains` - not_icontains
+       * * `starts_with` - starts_with
+       * * `not_starts_with` - not_starts_with
+       * * `ends_with` - ends_with
+       * * `not_ends_with` - not_ends_with
        * * `regex` - regex
        * * `not_regex` - not_regex
        * * `gt` - gt

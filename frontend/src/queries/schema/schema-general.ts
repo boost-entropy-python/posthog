@@ -8173,6 +8173,13 @@ export const externalDataSources = [
     'BCMS',
     'Convonite',
     'Hookdeck',
+    'Billit',
+    'Moxie',
+    'TripleWhale',
+    'Directus',
+    'Clay',
+    'TradableBits',
+    'Swan',
 ] as const
 
 export type ExternalDataSourceType = (typeof externalDataSources)[number]
@@ -8852,6 +8859,7 @@ export enum ProductIntentContext {
     METRICS_SQL_QUERY_RUN = 'metrics_sql_query_run',
     METRICS_QUERY_SAVED = 'metrics_query_saved',
     METRICS_FIRST_INGESTED = 'metrics_first_ingested',
+    METRICS_SCRAPE_AGENT_SNIPPET_COPIED = 'metrics_scrape_agent_snippet_copied',
 
     // Product Analytics
     TAXONOMIC_FILTER_EMPTY_STATE = 'taxonomic filter empty state',

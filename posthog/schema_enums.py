@@ -2453,6 +2453,13 @@ class ExternalDataSourceType(StrEnum):
     BCMS = "BCMS"
     CONVONITE = "Convonite"
     HOOKDECK = "Hookdeck"
+    BILLIT = "Billit"
+    MOXIE = "Moxie"
+    TRIPLE_WHALE = "TripleWhale"
+    DIRECTUS = "Directus"
+    CLAY = "Clay"
+    TRADABLE_BITS = "TradableBits"
+    SWAN = "Swan"
 
 
 class ExternalQueryErrorCode(StrEnum):
@@ -3318,6 +3325,7 @@ class ProductIntentContext(StrEnum):
     METRICS_SQL_QUERY_RUN = "metrics_sql_query_run"
     METRICS_QUERY_SAVED = "metrics_query_saved"
     METRICS_FIRST_INGESTED = "metrics_first_ingested"
+    METRICS_SCRAPE_AGENT_SNIPPET_COPIED = "metrics_scrape_agent_snippet_copied"
     TAXONOMIC_FILTER_EMPTY_STATE = "taxonomic filter empty state"
     CREATE_EXPERIMENT_FROM_FUNNEL_BUTTON = "create_experiment_from_funnel_button"
     WEB_ANALYTICS_INSIGHT = "web_analytics_insight"
@@ -3508,6 +3516,10 @@ class PropertyOperator(StrEnum):
     IS_NOT = "is_not"
     ICONTAINS = "icontains"
     NOT_ICONTAINS = "not_icontains"
+    STARTS_WITH = "starts_with"
+    NOT_STARTS_WITH = "not_starts_with"
+    ENDS_WITH = "ends_with"
+    NOT_ENDS_WITH = "not_ends_with"
     REGEX = "regex"
     NOT_REGEX = "not_regex"
     GT = "gt"
