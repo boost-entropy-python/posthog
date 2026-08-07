@@ -13275,16 +13275,43 @@ export namespace Schemas {
       truncated: boolean;
     }
 
+    /**
+     * Read shape for list/retrieve/create-response. `cimd_url` is nullable here for
+     * tokens issued before URL binding; the write serializers below require a value.
+     */
     export interface CIMDVerificationToken {
       readonly id: string;
-      /** @maxLength 40 */
-      label: string;
+      /** Human-readable name to identify this token later, e.g. 'Production CIMD partner'. */
+      readonly label: string;
+      /**
+         * HTTPS URL of the CIMD metadata document this token verifies at. Null on tokens issued before URL binding; those no longer verify until bound via PATCH or reissued.
+         * @maxLength 2048
+         * @nullable
+         */
+      readonly cimd_url: string | null;
       /** @nullable */
       readonly mask_value: string | null;
       readonly created_by: UserBasic;
       readonly created_at: string;
       /** @nullable */
       readonly last_used_at: string | null;
+    }
+
+    /**
+     * Write shape for `create`. `cimd_url` is required and non-null: only tokens
+     * issued before URL binding existed are nullable, not new ones.
+     */
+    export interface CIMDVerificationTokenCreate {
+      /**
+         * Human-readable name to identify this token later, e.g. 'Production CIMD partner'.
+         * @maxLength 40
+         */
+      label: string;
+      /**
+         * HTTPS URL of the CIMD metadata document this token will be published in. The token only verifies at this URL, so a copy hosted anywhere else is rejected. Host case, an explicit :443 and a trailing slash are normalized away; the path is case-sensitive.
+         * @maxLength 2048
+         */
+      cimd_url: string;
     }
 
     /**
@@ -13295,8 +13322,14 @@ export namespace Schemas {
      */
     export interface CIMDVerificationTokenWithValue {
       readonly id: string;
-      /** @maxLength 40 */
-      label: string;
+      /** Human-readable name to identify this token later, e.g. 'Production CIMD partner'. */
+      readonly label: string;
+      /**
+         * HTTPS URL of the CIMD metadata document this token verifies at. Null on tokens issued before URL binding; those no longer verify until bound via PATCH or reissued.
+         * @maxLength 2048
+         * @nullable
+         */
+      readonly cimd_url: string | null;
       /** @nullable */
       readonly mask_value: string | null;
       readonly created_by: UserBasic;
@@ -13440,6 +13473,52 @@ export namespace Schemas {
       tags?: QueryLogTags | null;
       /** version of the node, used for schema migrations */
       version?: number | null;
+    }
+
+    /**
+     * Sync state of one connected calendar (read-only).
+     */
+    export interface CalendarSyncStatus {
+      /** Id of the google-calendar integration. */
+      readonly integration_id: number;
+      /**
+         * When the last sync run completed; null before the first sync.
+         * @nullable
+         */
+      readonly last_synced_at: string | null;
+      /** Whether a sync run is currently in flight. */
+      readonly is_syncing: boolean;
+    }
+
+    /**
+     * Request body of the calendar sync-now trigger.
+     */
+    export interface CalendarSyncTrigger {
+      /** Id of the google-calendar integration to sync. */
+      integration_id: number;
+    }
+
+    /**
+     * * `started` - started
+     * * `already_running` - already_running
+     */
+    export type CalendarSyncTriggerResponseStatusEnum = typeof CalendarSyncTriggerResponseStatusEnum[keyof typeof CalendarSyncTriggerResponseStatusEnum];
+
+
+    export const CalendarSyncTriggerResponseStatusEnum = {
+      Started: 'started',
+      AlreadyRunning: 'already_running',
+    } as const;
+
+    /**
+     * Response of the calendar sync-now trigger.
+     */
+    export interface CalendarSyncTriggerResponse {
+      /** 'started' (a sync run began) or 'already_running' (a sync for this calendar was already in flight, so this was a no-op).
+       *
+       * * `started` - started
+       * * `already_running` - already_running */
+      status: CalendarSyncTriggerResponseStatusEnum;
     }
 
     /**
@@ -29175,6 +29254,8 @@ export namespace Schemas {
     }
 
     export interface ExperimentApiExposureCriteria {
+      /** Additional event (or action) an entity must emit at/after their first default exposure event before they count as exposed; exposure time becomes this event's timestamp. Only valid with the default exposure event, not a custom `exposure_config`. */
+      activation_config?: ExperimentApiExposureConfig | null;
       exposure_config?: ExperimentApiExposureConfig | null;
       filterTestAccounts?: boolean | null;
       /** How to handle entities exposed to multiple variants. 'exclude' (default) drops them from the analysis; 'first_seen' assigns them to the variant from their earliest exposure. */
@@ -29491,6 +29572,8 @@ export namespace Schemas {
     }
 
     export interface ExperimentExposureCriteria {
+      /** Additional event (or action) an entity must emit at/after their first default exposure event before they count as exposed; exposure time becomes this event's timestamp. Only valid with the default exposure event, not a custom `exposure_config`. */
+      activation_config?: ExperimentEventExposureConfig | ActionsNode | null;
       exposure_config?: ExperimentEventExposureConfig | ActionsNode | null;
       filterTestAccounts?: boolean | null;
       multiple_variant_handling?: MultipleVariantHandling | null;
@@ -39479,6 +39562,18 @@ export namespace Schemas {
       readonly code_name: string | null;
       /** Allowed values for List variables. Null for other variable types. */
       values?: unknown;
+      /** Whether a List variable accepts multiple selected values. */
+      is_multi?: boolean;
+      /**
+         * HogQL query whose first result column supplies the allowed values for a List variable. An optional second column supplies display labels.
+         * @nullable
+         */
+      values_query?: string | null;
+      /**
+         * ID of the external data source connection values_query runs against. Null runs it against PostHog.
+         * @nullable
+         */
+      values_query_connection_id?: string | null;
     }
 
     export interface InsightViewedRequest {
@@ -43758,6 +43853,11 @@ export namespace Schemas {
       readonly response_status: string;
       /** Whether this attendee organized the meeting. */
       readonly is_organizer: boolean;
+      /**
+         * UUID of the PostHog person resolved for this attendee, if any.
+         * @nullable
+         */
+      readonly person_id: string | null;
     }
 
     /**
@@ -46922,6 +47022,15 @@ export namespace Schemas {
       /** @nullable */
       previous?: string | null;
       results: MaxCoreMemory[];
+    }
+
+    export interface PaginatedMeetingList {
+      count: number;
+      /** @nullable */
+      next?: string | null;
+      /** @nullable */
+      previous?: string | null;
+      results: Meeting[];
     }
 
     export interface PaginatedMessageCategoryList {
@@ -52072,6 +52181,19 @@ export namespace Schemas {
     }
 
     /**
+     * Write shape for `partial_update` (PATCH). Exposes only `cimd_url`, and only ever
+     * performs a null -> value transition: `validate` rejects any instance whose `cimd_url`
+     * is already set, so an existing binding can never be re-pointed through this endpoint.
+     */
+    export interface PatchedCIMDVerificationTokenUpdate {
+      /**
+         * HTTPS URL of the CIMD metadata document to bind this token to. Only settable once, on a token with no existing binding; an already-bound token must be reissued instead.
+         * @maxLength 2048
+         */
+      cimd_url?: string;
+    }
+
+    /**
      * Writable canvas fields: metadata only — source changes go through publish/edit.
      */
     export interface PatchedCanvasUpdate {
@@ -54788,6 +54910,18 @@ export namespace Schemas {
       readonly code_name?: string | null;
       /** Allowed values for List variables. Null for other variable types. */
       values?: unknown;
+      /** Whether a List variable accepts multiple selected values. */
+      is_multi?: boolean;
+      /**
+         * HogQL query whose first result column supplies the allowed values for a List variable. An optional second column supplies display labels.
+         * @nullable
+         */
+      values_query?: string | null;
+      /**
+         * ID of the external data source connection values_query runs against. Null runs it against PostHog.
+         * @nullable
+         */
+      values_query_connection_id?: string | null;
     }
 
     /**
@@ -58064,12 +58198,12 @@ export namespace Schemas {
     export interface PatchedSurveySerializerCreateUpdateOnlySchema {
       readonly id?: string;
       /**
-         * Survey name.
+         * Survey name. Anyone can read it. In-app surveys send it to every visitor's browser alongside the questions and appearance text, and a hosted survey shows it on its public page. Keep customer names and other private details out of it.
          * @minLength 1
          * @maxLength 400
          */
       name?: string;
-      /** Survey description. */
+      /** Survey description. Internal only: unlike the name and questions, it is never delivered to visitors. */
       description?: string;
       /** Survey type.
        *
@@ -59847,6 +59981,26 @@ export namespace Schemas {
       status: number;
       /** The target project's response body, passed through. */
       data: unknown;
+    }
+
+    export interface PostHogConnectionTarget {
+      /** Project id to use in target API paths. It is the connected project's id, not this one's. */
+      project_id: number;
+      /** Name of the connected project. */
+      project_name: string;
+      /** Id of the organization the connected project belongs to. */
+      organization_id: string;
+      /** Name of the organization the connected project belongs to. */
+      organization_name: string;
+      /** Cloud region the connected project lives in, e.g. `US` or `EU`. */
+      region: string;
+      /** Base URL requests through this connection are sent to. */
+      base_url: string;
+    }
+
+    export interface PostHogConnectionTargetError {
+      /** Why the connected project's context could not be read. */
+      error: string;
     }
 
     /**
@@ -73247,12 +73401,12 @@ export namespace Schemas {
     export interface SurveySerializerCreateUpdateOnlySchema {
       readonly id: string;
       /**
-         * Survey name.
+         * Survey name. Anyone can read it. In-app surveys send it to every visitor's browser alongside the questions and appearance text, and a hosted survey shows it on its public page. Keep customer names and other private details out of it.
          * @minLength 1
          * @maxLength 400
          */
       name: string;
-      /** Survey description. */
+      /** Survey description. Internal only: unlike the name and questions, it is never delivered to visitors. */
       description?: string;
       /** Survey type.
        *
@@ -76329,6 +76483,12 @@ export namespace Schemas {
          */
       repository?: string | null;
       /**
+         * GitHub repositories to clone into the warm sandbox, each in `organization/repo` format.
+         * @maxItems 3
+         * @items.maxLength 255
+         */
+      repositories?: string[];
+      /**
          * Primary key of the team's GitHub integration to clone with when a repository is selected.
          * @nullable
          */
@@ -79159,6 +79319,21 @@ export namespace Schemas {
     include_history?: boolean;
     };
 
+    export type AccountsMeetingsListParams = {
+    /**
+     * Number of results to return per page.
+     */
+    limit?: number;
+    /**
+     * The initial index from which to return the results.
+     */
+    offset?: number;
+    /**
+     * Filter meetings by title or attendee email/name.
+     */
+    search?: string;
+    };
+
     export type AccountsSummariesListParams = {
     /**
      * Number of results to return per page.
@@ -79393,6 +79568,7 @@ export namespace Schemas {
      * * `StreamlitApp` - StreamlitApp
      * * `Metric` - Metric
      * * `TableCertification` - TableCertification
+     * * `DataQualityCheck` - DataQualityCheck
      * * `Billing` - Billing
      * * `Loop` - Loop
      * @minLength 1
@@ -79487,6 +79663,7 @@ export namespace Schemas {
       StreamlitApp: 'StreamlitApp',
       Metric: 'Metric',
       TableCertification: 'TableCertification',
+      DataQualityCheck: 'DataQualityCheck',
       Billing: 'Billing',
       Loop: 'Loop',
     } as const;
@@ -79567,6 +79744,7 @@ export namespace Schemas {
      * * `StreamlitApp` - StreamlitApp
      * * `Metric` - Metric
      * * `TableCertification` - TableCertification
+     * * `DataQualityCheck` - DataQualityCheck
      * * `Billing` - Billing
      * * `Loop` - Loop
      */
@@ -79649,6 +79827,7 @@ export namespace Schemas {
       StreamlitApp: 'StreamlitApp',
       Metric: 'Metric',
       TableCertification: 'TableCertification',
+      DataQualityCheck: 'DataQualityCheck',
       Billing: 'Billing',
       Loop: 'Loop',
     } as const;
