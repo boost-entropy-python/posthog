@@ -1,3 +1,4 @@
+import errno
 import socket
 import threading
 from collections.abc import Generator, Iterable, Iterator
@@ -30,6 +31,7 @@ from products.warehouse_sources.backend.temporal.data_imports.pipelines.core.arr
     TemporaryFileSizeExceedsLimitException,
 )
 from products.warehouse_sources.backend.temporal.data_imports.pipelines.core.consts import DEFAULT_CHUNK_SIZE
+from products.warehouse_sources.backend.temporal.data_imports.sources.common.base import error_message_matches
 from products.warehouse_sources.backend.temporal.data_imports.sources.common.sql.predicates import (
     ColumnTypeCategory,
     ValidatedRowFilter,
@@ -426,6 +428,21 @@ class TestPostgresSourceNonRetryableErrors:
     @pytest.mark.parametrize(
         "error_msg",
         [
+            'OperationalError: connection failed: connection to server at "db.example.com", port 5432 failed: server closed the connection unexpectedly',
+            'OperationalError: connection failed: connection to server at "db.example.com", port 5432 failed: SSL connection has been closed unexpectedly',
+        ],
+    )
+    def test_exhausted_connection_drops_are_classified_retryable(self, source, error_msg):
+        # These transient drops are retried in-process, then re-raised once that budget is exhausted.
+        # If they drop out of get_retryable_errors, _handle_import_error logs the self-recovering
+        # failure as a tracked exception again instead of a warning. They must also stay out of
+        # get_non_retryable_errors so the sync keeps retrying rather than being disabled.
+        assert error_message_matches(error_msg, source.get_retryable_errors())
+        assert not error_message_matches(error_msg, source.get_non_retryable_errors().keys())
+
+    @pytest.mark.parametrize(
+        "error_msg",
+        [
             # Raw psycopg message (what the activity-level check sees via str(e)) when require_ssl=False
             # leaves the OperationalError unwrapped. The host/port are volatile; the alert text is stable.
             'connection failed: connection to server at "37.16.27.102", port 6432 failed: SSL error: tlsv1 alert no application protocol',
@@ -766,6 +783,23 @@ class TestPostgresSourceNonRetryableErrors:
         assert is_non_retryable, (
             f"Password auth failure without 'for user' wording should be non-retryable: {error_msg}"
         )
+
+    @pytest.mark.parametrize(
+        "error_msg",
+        [
+            'connection to server at "203.0.113.30", port 5432 failed: FATAL:  password authentication failed for user "u"',
+            'connection to server at "203.0.113.30", port 5432 failed: FATAL:  password authentication failed\nuser "u"',
+            "connection failed: error received from server in SCRAM exchange: Wrong password",
+        ],
+    )
+    def test_password_authentication_failure_surfaces_a_host_free_message(self, source, error_msg):
+        # The raw driver string embeds the host/IP and port; the surfaced message must be actionable
+        # and carry neither. Guards a regression back to the raw error (value `None`).
+        non_retryable = source.get_non_retryable_errors()
+        friendly = [reason for pattern, reason in non_retryable.items() if pattern in error_msg and reason]
+        assert friendly, "A rejected password should surface an actionable message"
+        assert "username or password" in friendly[0]
+        assert "203.0.113.30" not in friendly[0]
 
     @pytest.mark.parametrize(
         "error_msg",
@@ -1696,6 +1730,11 @@ class TestIsConnectionDroppedError:
             # Supavisor XX000 InternalError_ codes above. Transient — a banned server rejoins on a
             # passing health check or once its ban expires — so the reconnect must catch it.
             psycopg.errors.SystemError("could not get connection from the pool - AllServersDown"),
+            # psycopg's own message when `PQconnectStart` reports the connection BAD before the
+            # handshake begins and libpq has no server-reported error text to attach — a purely
+            # local pre-handshake failure (e.g. the worker briefly out of file descriptors), not a
+            # server-side rejection. Transient; the reconnect must catch it.
+            psycopg.OperationalError("connection is bad: no error details available"),
         ],
     )
     def test_connection_dropped_errors_are_detected(self, error):
@@ -1728,6 +1767,10 @@ class TestIsConnectionDroppedError:
             # transient Erlang-tuple "{:error, :econnrefused}" — broadening the match to a plain
             # "refused" substring would wrongly retry it.
             psycopg.OperationalError('connection to server at "10.0.0.1", port 5432 failed: Connection refused'),
+            # A "connection is bad" failure that *does* carry a server-reported detail is a genuine,
+            # permanent rejection — only the "no error details available" variant (a purely local,
+            # pre-handshake failure) is transient, so the match must not broaden to the bare prefix.
+            psycopg.OperationalError("connection is bad: FATAL: password authentication failed"),
         ],
     )
     def test_unrelated_errors_are_not_detected(self, error):
@@ -1772,6 +1815,12 @@ class TestDroppedOrConnectTimeout:
                 'connection failed: connection to server at "10.0.0.1", port 5432 failed: '
                 "FATAL:  the database system is shutting down"
             ),
+            # This worker's process-wide (EMFILE) or system-wide (ENFILE) file-descriptor table is
+            # full while opening the socket for a fresh connect. Transient on our side of the wire —
+            # a descriptor frees the moment another connection/cursor in this worker closes — so the
+            # connect retry must recover instead of failing the whole activity on the first blip.
+            OSError(errno.EMFILE, "Too many open files"),
+            OSError(errno.ENFILE, "Too many open files in system"),
         ],
     )
     def test_transient_connect_path_errors_are_retryable(self, error):
@@ -1794,6 +1843,9 @@ class TestDroppedOrConnectTimeout:
                 "FATAL:  the database system is not accepting connections "
                 "DETAIL:  Hot standby mode is disabled."
             ),
+            # An unrelated OSError must not be absorbed just because OSError is now one of the
+            # caught types — only the EMFILE/ENFILE fd-exhaustion errno is retryable.
+            OSError(errno.ENOSPC, "No space left on device"),
         ],
     )
     def test_permanent_and_non_connect_errors_are_not_retryable(self, error):
