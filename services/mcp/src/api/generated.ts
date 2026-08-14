@@ -26155,6 +26155,54 @@ export namespace Schemas {
       error: string | null;
     }
 
+    /**
+     * Body of POST /vision/scanners/draft/ — the user's goal, stated in their own words.
+     */
+    export interface DraftScannerRequest {
+      /**
+         * What the user wants to accomplish, e.g. 'find out where users get stuck during onboarding'.
+         * @maxLength 2000
+         */
+      goal: string;
+    }
+
+    /**
+     * * `monitor` - Monitor
+     * * `classifier` - Classifier
+     * * `scorer` - Scorer
+     * * `summarizer` - Summarizer
+     */
+    export type ScannerTypeEnum = typeof ScannerTypeEnum[keyof typeof ScannerTypeEnum];
+
+
+    export const ScannerTypeEnum = {
+      Monitor: 'monitor',
+      Classifier: 'classifier',
+      Scorer: 'scorer',
+      Summarizer: 'summarizer',
+    } as const;
+
+    /**
+     * An AI-drafted scanner configuration, ready to seed the creation wizard. Nothing is persisted.
+     */
+    export interface DraftScannerResponse {
+      /** Drafted scanner name. */
+      name: string;
+      /** Drafted one-sentence description. */
+      description: string;
+      /** The scanner type the draft picked for the goal.
+       *
+       * * `monitor` - Monitor
+       * * `classifier` - Classifier
+       * * `scorer` - Scorer
+       * * `summarizer` - Summarizer */
+      scanner_type: ScannerTypeEnum;
+      /** Type-specific config for the drafted `scanner_type`; always includes `prompt`. */
+      scanner_config: unknown;
+      /** Why the draft picked this scanner type and configuration, addressed to the user. */
+      rationale: string;
+    }
+
     export interface DraftStatusResponse {
       updated_at: string;
       has_draft: boolean;
@@ -41016,22 +41064,6 @@ export namespace Schemas {
     }
 
     /**
-     * * `monitor` - Monitor
-     * * `classifier` - Classifier
-     * * `scorer` - Scorer
-     * * `summarizer` - Summarizer
-     */
-    export type ScannerTypeEnum = typeof ScannerTypeEnum[keyof typeof ScannerTypeEnum];
-
-
-    export const ScannerTypeEnum = {
-      Monitor: 'monitor',
-      Classifier: 'classifier',
-      Scorer: 'scorer',
-      Summarizer: 'summarizer',
-    } as const;
-
-    /**
      * Body of POST /vision/scanners/inline_scan/ - a prompt plus the sessions to point it at.
      */
     export interface InlineScanRequest {
@@ -47369,6 +47401,13 @@ export namespace Schemas {
       readonly created_at: string;
     }
 
+    export interface OrganizationRemoveBlockedMembersResponse {
+      /** Whether verified-domain enforcement was turned on. */
+      success: boolean;
+      /** How many members with an email outside the verified domains were removed from the organization. Owners are never removed. */
+      removed_members: number;
+    }
+
     /**
      * * `onboarding` - Onboarding
      * * `error_tracking` - Error Tracking
@@ -49668,6 +49707,12 @@ export namespace Schemas {
          * @maxLength 1000
          */
       description?: string;
+      /**
+         * Organizational tags for this scanner. Distinct from a classifier's tag vocabulary in scanner_config. Tags cannot contain commas.
+         * @maxItems 32
+         * @items.maxLength 255
+         */
+      tags?: string[];
       /** What the scanner does: monitor, classifier, scorer, or summarizer.
        *
        * * `monitor` - Monitor
@@ -58877,6 +58922,12 @@ export namespace Schemas {
          * @maxLength 1000
          */
       description?: string;
+      /**
+         * Organizational tags for this scanner. Distinct from a classifier's tag vocabulary in scanner_config. Tags cannot contain commas.
+         * @maxItems 32
+         * @items.maxLength 255
+         */
+      tags?: string[];
       /** What the scanner does: monitor, classifier, scorer, or summarizer.
        *
        * * `monitor` - Monitor
@@ -81230,6 +81281,14 @@ export namespace Schemas {
 
     export type MembersListParams = {
     /**
+     * Only return members whose email address is on this domain (case-insensitive).
+     */
+    email_domain?: string;
+    /**
+     * Comma-separated membership levels to return, e.g. `1,8`. Levels are 1 member, 8 admin, 15 owner.
+     */
+    levels?: string;
+    /**
      * Number of results to return per page.
      */
     limit?: number;
@@ -81241,6 +81300,10 @@ export namespace Schemas {
      * Sort order. Defaults to `-joined_at`.
      */
     order?: string;
+    /**
+     * When `true`, only return members whose email domain is not one of the organization's verified domains — the members who would lose access under verified-domain enforcement.
+     */
+    outside_verified_domains?: boolean;
     /**
      * Match against member `first_name`, `last_name`, and `email`. Returns exact (case-insensitive substring) matches only; if no exact match exists, returns similar (fuzzy trigram — typos, prefix-as-you-type) matches instead. Each result's `search_match_type` is `exact` or `similar`. Capped at 200 characters.
      */
@@ -90057,6 +90120,10 @@ export namespace Schemas {
      * Case-insensitive substring match across name, description, and the prompt in scanner_config.
      */
     search?: string;
+    /**
+     * Filter to scanners carrying at least one of the given tags (comma-separated).
+     */
+    tags?: string;
     };
 
     export type VisionScannersImpactRetrieveParams = {
