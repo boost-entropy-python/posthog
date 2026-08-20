@@ -17523,6 +17523,16 @@ export namespace Schemas {
       readonly last_error_message: string | null;
       /** @nullable */
       readonly count: number | null;
+      /**
+         * Number of IDs supplied by the most recent static cohort import. Null if the cohort was never populated from a list of IDs.
+         * @nullable
+         */
+      readonly last_import_total_count: number | null;
+      /**
+         * How many of the IDs in the most recent static cohort import matched no person, and so were not added to the cohort.
+         * @nullable
+         */
+      readonly last_import_unmatched_count: number | null;
       is_static?: boolean;
       /** Type of cohort based on filter complexity
        *
@@ -19917,6 +19927,20 @@ export namespace Schemas {
       Wide: 'wide',
     } as const;
 
+    /**
+     * * `vertical` - vertical
+     * * `horizontal` - horizontal
+     * * `stable` - stable
+     */
+    export type LayoutCompactionEnum = typeof LayoutCompactionEnum[keyof typeof LayoutCompactionEnum];
+
+
+    export const LayoutCompactionEnum = {
+      Vertical: 'vertical',
+      Horizontal: 'horizontal',
+      Stable: 'stable',
+    } as const;
+
     export interface DashboardCustomization {
       /** Named tile density preset.
        *
@@ -19926,6 +19950,12 @@ export namespace Schemas {
        * * `relaxed` - relaxed
        * * `wide` - wide */
       tile_spacing?: TileSpacingEnum;
+      /** How tiles rearrange after a move or resize. vertical stacks tiles upward, horizontal stacks tiles to the left, and stable preserves positions while moving colliding tiles.
+       *
+       * * `vertical` - vertical
+       * * `horizontal` - horizontal
+       * * `stable` - stable */
+      layout_compaction?: LayoutCompactionEnum;
     }
 
     /**
@@ -20006,6 +20036,12 @@ export namespace Schemas {
        * * `relaxed` - relaxed
        * * `wide` - wide */
       grid_spacing?: TileSpacingEnum;
+      /** How tiles rearrange after a move or resize. vertical stacks tiles upward, horizontal stacks tiles to the left, and stable preserves positions while moving colliding tiles.
+       *
+       * * `vertical` - vertical
+       * * `horizontal` - horizontal
+       * * `stable` - stable */
+      layout_compaction?: LayoutCompactionEnum;
       /** @nullable */
       readonly tiles: readonly DashboardTilesItem[] | null;
       /** Template key to create the dashboard from a predefined template. */
@@ -20916,7 +20952,7 @@ export namespace Schemas {
       /** running, completed, failed, or empty (nothing matched the trigger). */
       readonly status: string;
       /**
-         * 'table' or 'view' when the run targets exactly one subject; null for a check-scoped or multi-subject run.
+         * 'table' or 'view' when the run targets exactly one subject, including a run of a single check on that subject; null for a run spanning several subjects.
          * @nullable
          */
       readonly subject_type: string | null;
@@ -21556,6 +21592,8 @@ export namespace Schemas {
       readonly latest_error: string | null;
       /** @nullable */
       readonly is_materialized: boolean | null;
+      /** Whether this view is set up to update incrementally. A run can still rebuild the whole table, for example on the first run or after the query changes. */
+      readonly is_incremental: boolean;
       /** Where this SavedQuery is created.
        *
        * * `data_warehouse` - Data Warehouse
@@ -30982,6 +31020,37 @@ export namespace Schemas {
       skip_on_conflict?: boolean;
     }
 
+    /**
+     * Form fields to include in the multipart POST, before the file part.
+     */
+    export type ErrorTrackingSymbolSetPresignedPostFields = {[key: string]: string};
+
+    export interface ErrorTrackingSymbolSetPresignedPost {
+      /** S3 endpoint URL to send the multipart POST to. */
+      url: string;
+      /** Form fields to include in the multipart POST, before the file part. */
+      fields: ErrorTrackingSymbolSetPresignedPostFields;
+    }
+
+    export interface ErrorTrackingSymbolSetBulkStartUploadEntry {
+      /** ID of the symbol set the upload belongs to. */
+      symbol_set_id: string;
+      /** Presigned POST for the upload. Uses the S3 transfer-acceleration endpoint when configured. */
+      presigned_url: ErrorTrackingSymbolSetPresignedPost;
+      /** Presigned POST against the standard S3 endpoint, present only when the primary URL uses transfer acceleration. For clients whose network blocks the accelerated endpoint. */
+      fallback_presigned_url?: ErrorTrackingSymbolSetPresignedPost;
+    }
+
+    /**
+     * Map of chunk ID to upload details. Chunks skipped because their content is unchanged are omitted.
+     */
+    export type ErrorTrackingSymbolSetBulkStartUploadResponseIdMap = {[key: string]: ErrorTrackingSymbolSetBulkStartUploadEntry};
+
+    export interface ErrorTrackingSymbolSetBulkStartUploadResponse {
+      /** Map of chunk ID to upload details. Chunks skipped because their content is unchanged are omitted. */
+      id_map: ErrorTrackingSymbolSetBulkStartUploadResponseIdMap;
+    }
+
     export interface ErrorTrackingSymbolSetFinishUpload {
       /** Hash of the uploaded symbol set content. */
       content_hash: string;
@@ -37707,6 +37776,8 @@ export namespace Schemas {
          * @nullable
          */
       readonly requested_on: string | null;
+      /** Uploaded image IDs attached to this evidence item, in display order. */
+      readonly image_ids: readonly string[];
       /**
          * ID of the user who added the evidence.
          * @nullable
@@ -37847,6 +37918,8 @@ export namespace Schemas {
          * @nullable
          */
       requested_on?: string | null;
+      /** Uploaded image IDs from this project to attach in display order. */
+      image_ids?: string[];
     }
 
     export interface FeatureRequestAddAccount {
@@ -37897,6 +37970,8 @@ export namespace Schemas {
          * @nullable
          */
       requested_on?: string | null;
+      /** Uploaded image IDs from this project to attach in display order. */
+      image_ids?: string[];
       /**
          * Request version loaded by the editor. Stale versions return 409 Conflict.
          * @minimum 1
@@ -37936,6 +38011,8 @@ export namespace Schemas {
          * @nullable
          */
       requested_on?: string | null;
+      /** Uploaded image IDs from this project to attach in display order. */
+      image_ids?: string[];
       /**
          * Request version loaded by the editor. Stale versions return 409 Conflict.
          * @minimum 1
@@ -37987,6 +38064,7 @@ export namespace Schemas {
       source_url: string;
       /** @nullable */
       requested_on: string | null;
+      image_ids?: string[];
     } | null;
 
     /**
@@ -38011,6 +38089,7 @@ export namespace Schemas {
       source_url: string;
       /** @nullable */
       requested_on: string | null;
+      image_ids?: string[];
     } | null;
 
     export interface FeatureRequestHistoryChange {
@@ -39890,6 +39969,7 @@ export namespace Schemas {
      * * `events` - events
      * * `person-updates` - person-updates
      * * `data-warehouse-table` - data-warehouse-table
+     * * `data-warehouse-view` - data-warehouse-view
      */
     export type HogFunctionFiltersSourceEnum = typeof HogFunctionFiltersSourceEnum[keyof typeof HogFunctionFiltersSourceEnum];
 
@@ -39898,6 +39978,7 @@ export namespace Schemas {
       Events: 'events',
       PersonUpdates: 'person-updates',
       DataWarehouseTable: 'data-warehouse-table',
+      DataWarehouseView: 'data-warehouse-view',
     } as const;
 
     export type HogFunctionFiltersActionsItem = { [key: string]: unknown };
@@ -49446,6 +49527,44 @@ export namespace Schemas {
       redirect_url: string;
     }
 
+    /**
+     * * `insight` - insight
+     * * `hogql` - hogql
+     * * `dashboard` - dashboard
+     * * `error` - error
+     * * `replay` - replay
+     * * `flag` - flag
+     * * `experiment` - experiment
+     * * `survey` - survey
+     * * `ticket` - ticket
+     * * `trace` - trace
+     * * `eval` - eval
+     * * `event` - event
+     * * `cohort` - cohort
+     * * `action` - action
+     * * `person` - person
+     */
+    export type ObjectKindEnum = typeof ObjectKindEnum[keyof typeof ObjectKindEnum];
+
+
+    export const ObjectKindEnum = {
+      Insight: 'insight',
+      Hogql: 'hogql',
+      Dashboard: 'dashboard',
+      Error: 'error',
+      Replay: 'replay',
+      Flag: 'flag',
+      Experiment: 'experiment',
+      Survey: 'survey',
+      Ticket: 'ticket',
+      Trace: 'trace',
+      Eval: 'eval',
+      Event: 'event',
+      Cohort: 'cohort',
+      Action: 'action',
+      Person: 'person',
+    } as const;
+
     export interface ObjectMediaPreview {
       readonly id: string;
       readonly created_at: string;
@@ -50140,7 +50259,7 @@ export namespace Schemas {
       readonly id: string;
       /** @maxLength 255 */
       name?: string;
-      /** @maxLength 100 */
+      /** @maxLength 2048 */
       client_id?: string;
       readonly redirect_uris_list: readonly string[];
       /** True if this application has been verified by PostHog */
@@ -54538,6 +54657,30 @@ export namespace Schemas {
       DeltaS3Wrapper: 'DeltaS3Wrapper',
     } as const;
 
+    /**
+     * * `web` - web
+     * * `api` - api
+     * * `mcp` - mcp
+     * * `wizard` - wizard
+     * * `self_driving` - self_driving
+     * * `source` - source
+     * * `materialized_view` - materialized_view
+     * * `demo` - demo
+     */
+    export type TableCreatedViaEnum = typeof TableCreatedViaEnum[keyof typeof TableCreatedViaEnum];
+
+
+    export const TableCreatedViaEnum = {
+      Web: 'web',
+      Api: 'api',
+      Mcp: 'mcp',
+      Wizard: 'wizard',
+      SelfDriving: 'self_driving',
+      Source: 'source',
+      MaterializedView: 'materialized_view',
+      Demo: 'demo',
+    } as const;
+
     export interface SimpleExternalDataSourceSerializers {
       readonly id: string;
       readonly created_at: string;
@@ -54570,6 +54713,17 @@ export namespace Schemas {
       format: TableFormatEnum;
       readonly created_by: UserBasic;
       readonly created_at: string;
+      /** Where the table came from: `web` for the in-app UI, `api` for direct API callers, `mcp` for agent/MCP tool calls, `wizard` for the setup agent, `self_driving` for a self-driving run, `source` for a table a data source syncs, `materialized_view` for the table behind a materialized view, and `demo` for a demo project's sample table. Set server-side from the request, never from the request body. Null on tables created before this was recorded.
+       *
+       * * `web` - web
+       * * `api` - api
+       * * `mcp` - mcp
+       * * `wizard` - wizard
+       * * `self_driving` - self_driving
+       * * `source` - source
+       * * `materialized_view` - materialized_view
+       * * `demo` - demo */
+      readonly created_via: TableCreatedViaEnum | null;
       /** @maxLength 500 */
       url_pattern: string;
       credential: Credential;
@@ -54732,7 +54886,7 @@ export namespace Schemas {
       Ultracode: 'ultracode',
     } as const;
 
-    export interface TaskRunArtifactMetadata {
+    export interface TaskRunSkillBundleMetadata {
       /**
          * Name of the local skill included in a skill_bundle artifact.
          * @maxLength 255
@@ -54762,6 +54916,59 @@ export namespace Schemas {
     }
 
     /**
+     * * `posthog_object` - posthog_object
+     */
+    export type ReferenceTypeEnum = typeof ReferenceTypeEnum[keyof typeof ReferenceTypeEnum];
+
+
+    export const ReferenceTypeEnum = {
+      PosthogObject: 'posthog_object',
+    } as const;
+
+    export interface TaskRunPostHogReferenceMetadata {
+      /** Reference metadata type. posthog_object identifies a live PostHog object.
+       *
+       * * `posthog_object` - posthog_object */
+      reference_type: ReferenceTypeEnum;
+      /** PostHog object kind used to resolve the reference.
+       *
+       * * `insight` - insight
+       * * `hogql` - hogql
+       * * `dashboard` - dashboard
+       * * `error` - error
+       * * `replay` - replay
+       * * `flag` - flag
+       * * `experiment` - experiment
+       * * `survey` - survey
+       * * `ticket` - ticket
+       * * `trace` - trace
+       * * `eval` - eval
+       * * `event` - event
+       * * `cohort` - cohort
+       * * `action` - action
+       * * `person` - person */
+      object_kind: ObjectKindEnum;
+      /**
+         * Exact PostHog object identifier, flag key, event name, or SQL query.
+         * @maxLength 16384
+         */
+      object_id: string;
+      /**
+         * Completed assistant message identifiers that referenced the object.
+         * @maxItems 100
+         * @items.maxLength 255
+         */
+      source_message_ids: string[];
+      /**
+         * Number of distinct completed assistant messages that referenced the object.
+         * @minimum 1
+         */
+      occurrence_count: number;
+    }
+
+    export type TaskRunArtifactMetadata = TaskRunSkillBundleMetadata | TaskRunPostHogReferenceMetadata;
+
+    /**
      * * `agent` - agent
      * * `user` - user
      */
@@ -54786,11 +54993,11 @@ export namespace Schemas {
       size?: number;
       /** Optional MIME type */
       content_type?: string;
-      /** Optional structured metadata for special artifact types, such as skill bundles. */
+      /** Structured metadata for a skill bundle or a PostHog object reference. */
       metadata?: TaskRunArtifactMetadata;
-      /** S3 object key for the artifact */
-      storage_path: string;
-      /** Timestamp when the artifact was uploaded */
+      /** S3 object key for file artifacts. Reference artifacts do not have one. */
+      storage_path?: string;
+      /** Timestamp when the artifact was uploaded or registered */
       uploaded_at: string;
       /** Whether the artifact version was uploaded by the task agent or an interactive user.
        *
@@ -57142,6 +57349,16 @@ export namespace Schemas {
       readonly last_error_message?: string | null;
       /** @nullable */
       readonly count?: number | null;
+      /**
+         * Number of IDs supplied by the most recent static cohort import. Null if the cohort was never populated from a list of IDs.
+         * @nullable
+         */
+      readonly last_import_total_count?: number | null;
+      /**
+         * How many of the IDs in the most recent static cohort import matched no person, and so were not added to the cohort.
+         * @nullable
+         */
+      readonly last_import_unmatched_count?: number | null;
       is_static?: boolean;
       /** Type of cohort based on filter complexity
        *
@@ -60900,6 +61117,12 @@ export namespace Schemas {
        * * `relaxed` - relaxed
        * * `wide` - wide */
       grid_spacing?: TileSpacingEnum;
+      /** How tiles rearrange after a move or resize. vertical stacks tiles upward, horizontal stacks tiles to the left, and stable preserves positions while moving colliding tiles.
+       *
+       * * `vertical` - vertical
+       * * `horizontal` - horizontal
+       * * `stable` - stable */
+      layout_compaction?: LayoutCompactionEnum;
       /** Dashboard tiles to update. Widget tiles accept nested widget.config patches. */
       tiles?: DashboardPatchTileOpenApi[];
       /** Template key to create the dashboard from a predefined template. */
@@ -63524,6 +63747,17 @@ export namespace Schemas {
       format?: TableFormatEnum;
       readonly created_by?: UserBasic;
       readonly created_at?: string;
+      /** Where the table came from: `web` for the in-app UI, `api` for direct API callers, `mcp` for agent/MCP tool calls, `wizard` for the setup agent, `self_driving` for a self-driving run, `source` for a table a data source syncs, `materialized_view` for the table behind a materialized view, and `demo` for a demo project's sample table. Set server-side from the request, never from the request body. Null on tables created before this was recorded.
+       *
+       * * `web` - web
+       * * `api` - api
+       * * `mcp` - mcp
+       * * `wizard` - wizard
+       * * `self_driving` - self_driving
+       * * `source` - source
+       * * `materialized_view` - materialized_view
+       * * `demo` - demo */
+      readonly created_via?: TableCreatedViaEnum | null;
       /** @maxLength 500 */
       url_pattern?: string;
       credential?: Credential;
@@ -79631,8 +79865,8 @@ export namespace Schemas {
          * @maxLength 255
          */
       content_type?: string;
-      /** Optional structured metadata for special artifact types, such as skill bundles. */
-      metadata?: TaskRunArtifactMetadata;
+      /** Skill bundle metadata, required when the artifact type is skill_bundle. */
+      metadata?: TaskRunSkillBundleMetadata;
     }
 
     export interface TaskRunArtifactPrepareUpload {
@@ -79668,8 +79902,8 @@ export namespace Schemas {
          * @maxLength 255
          */
       content_type?: string;
-      /** Optional structured metadata for special artifact types, such as skill bundles. */
-      metadata?: TaskRunArtifactMetadata;
+      /** Skill bundle metadata, required when the artifact type is skill_bundle. */
+      metadata?: TaskRunSkillBundleMetadata;
     }
 
     export interface TaskRunArtifactPrepareUploadResponse {
@@ -79685,8 +79919,8 @@ export namespace Schemas {
       size: number;
       /** Optional MIME type */
       content_type?: string;
-      /** Optional structured metadata for special artifact types, such as skill bundles. */
-      metadata?: TaskRunArtifactMetadata;
+      /** Skill bundle metadata, required when the artifact type is skill_bundle. */
+      metadata?: TaskRunSkillBundleMetadata;
       /** S3 object key reserved for the artifact */
       storage_path: string;
       /** Presigned POST expiry in seconds */
@@ -79744,8 +79978,8 @@ export namespace Schemas {
          * @maxLength 255
          */
       content_type?: string;
-      /** Optional structured metadata for special artifact types, such as skill bundles. */
-      metadata?: TaskRunArtifactMetadata;
+      /** Skill bundle metadata, required when the artifact type is skill_bundle. */
+      metadata?: TaskRunSkillBundleMetadata;
     }
 
     export interface TaskRunArtifactsDismissRequest {
@@ -80382,6 +80616,55 @@ export namespace Schemas {
       peers: TaskRunPeer[];
     }
 
+    export interface TaskRunPostHogReference {
+      /**
+         * Fallback display name for the referenced object.
+         * @maxLength 255
+         */
+      name: string;
+      /** PostHog object kind used to resolve the reference.
+       *
+       * * `insight` - insight
+       * * `hogql` - hogql
+       * * `dashboard` - dashboard
+       * * `error` - error
+       * * `replay` - replay
+       * * `flag` - flag
+       * * `experiment` - experiment
+       * * `survey` - survey
+       * * `ticket` - ticket
+       * * `trace` - trace
+       * * `eval` - eval
+       * * `event` - event
+       * * `cohort` - cohort
+       * * `action` - action
+       * * `person` - person */
+      object_kind: ObjectKindEnum;
+      /**
+         * Exact PostHog object identifier, flag key, event name, or SQL query.
+         * @maxLength 16384
+         */
+      object_id: string;
+      /**
+         * Stable identifier of the completed assistant message containing the reference.
+         * @maxLength 255
+         */
+      source_message_id: string;
+    }
+
+    export interface TaskRunPostHogReferencesRequest {
+      /**
+         * PostHog object references extracted from one completed assistant message.
+         * @maxItems 50
+         */
+      references: TaskRunPostHogReference[];
+    }
+
+    export interface TaskRunPostHogReferencesResponse {
+      /** Updated list of artifacts on the run. */
+      artifacts: TaskRunArtifactResponse[];
+    }
+
     export interface TaskRunRelayMessageRequest {
       /**
          * Joined message body. Used when text_parts is absent.
@@ -80523,8 +80806,8 @@ export namespace Schemas {
          * @maxLength 255
          */
       content_type?: string;
-      /** Optional structured metadata for special artifact types, such as skill bundles. */
-      metadata?: TaskRunArtifactMetadata;
+      /** Skill bundle metadata, required when the artifact type is skill_bundle. */
+      metadata?: TaskRunSkillBundleMetadata;
     }
 
     export interface TaskStagedArtifactPrepareUpload {
@@ -80560,8 +80843,8 @@ export namespace Schemas {
          * @maxLength 255
          */
       content_type?: string;
-      /** Optional structured metadata for special artifact types, such as skill bundles. */
-      metadata?: TaskRunArtifactMetadata;
+      /** Skill bundle metadata, required when the artifact type is skill_bundle. */
+      metadata?: TaskRunSkillBundleMetadata;
     }
 
     export interface TaskStagedArtifactPrepareUploadResponse {
@@ -80577,8 +80860,8 @@ export namespace Schemas {
       size: number;
       /** Optional MIME type */
       content_type?: string;
-      /** Optional structured metadata for special artifact types, such as skill bundles. */
-      metadata?: TaskRunArtifactMetadata;
+      /** Skill bundle metadata, required when the artifact type is skill_bundle. */
+      metadata?: TaskRunSkillBundleMetadata;
       /** S3 object key reserved for the staged artifact */
       storage_path: string;
       /** Presigned POST expiry in seconds */
