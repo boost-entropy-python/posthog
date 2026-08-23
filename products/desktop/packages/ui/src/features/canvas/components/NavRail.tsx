@@ -10,10 +10,11 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@posthog/quill";
-import { LOOPS_FLAG } from "@posthog/shared";
+import { DESKTOP_HOME_FLAG, LOOPS_FLAG } from "@posthog/shared";
 import { ANALYTICS_EVENTS } from "@posthog/shared/analytics-events";
 import { ActivityHoverCard } from "@posthog/ui/features/canvas/components/ActivityHoverCard";
 import {
+  pickRailDestination,
   type RailCounts,
   type RailDestination,
   visibleRailDestinations,
@@ -170,6 +171,7 @@ function ActivityNavItem({
  * that sidebar leaves the destinations reachable.
  */
 export function NavRail() {
+  const homeEnabled = useFeatureFlag(DESKTOP_HOME_FLAG);
   const loopsEnabled = useFeatureFlag(LOOPS_FLAG, import.meta.env.DEV);
 
   const { counts: inboxCounts } = useInboxAllReports({
@@ -191,20 +193,19 @@ export function NavRail() {
   const destinations = visibleRailDestinations({
     overrides: navItemOverrides,
     order: navItemOrder,
+    home: homeEnabled,
     loops: loopsEnabled,
   });
   const settingsVisible = isNavItemVisible(navItemOverrides, "configure");
 
-  const pick =
-    ({ analyticsId, onPick }: RailDestination) =>
-    () => {
-      track(ANALYTICS_EVENTS.SIDEBAR_NAV_ITEM_CLICKED, {
-        item: analyticsId,
-        in_more: false,
-        layout: "channels",
-      });
-      onPick();
-    };
+  const pick = (destination: RailDestination) => () => {
+    track(ANALYTICS_EVENTS.SIDEBAR_NAV_ITEM_CLICKED, {
+      item: destination.analyticsId,
+      in_more: false,
+      layout: "channels",
+    });
+    pickRailDestination(destination, railPane);
+  };
 
   return (
     // One provider for the whole rail: the tooltip skip window is provider
