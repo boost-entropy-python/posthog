@@ -27,15 +27,12 @@ import { addProductIntentForCrossSell } from 'lib/utils/product-intents'
 import { pluralize } from 'lib/utils/strings'
 import stringWithWBR from 'lib/utils/stringWithWBR'
 import { CONCLUSION_DISPLAY_CONFIG } from 'scenes/experiments/constants'
-import { CopyExperimentToProjectModal } from 'scenes/experiments/CopyExperimentToProjectModal'
-import { DuplicateExperimentModal } from 'scenes/experiments/DuplicateExperimentModal'
 import {
     canArchiveExperiment,
     confirmArchiveExperiment,
     confirmDeleteExperiment,
 } from 'scenes/experiments/experimentActions'
 import { getExperimentStatus } from 'scenes/experiments/experimentStatus'
-import { ExperimentVelocityStats } from 'scenes/experiments/ExperimentVelocityStats'
 import MaxTool from 'scenes/max/MaxTool'
 import { useMaxTool } from 'scenes/max/useMaxTool'
 import { organizationLogic } from 'scenes/organizationLogic'
@@ -57,6 +54,9 @@ import {
     ExperimentsTabs,
 } from '~/types'
 
+import { CopyExperimentToProjectModal } from 'products/experiments/frontend/components/CopyExperimentToProjectModal'
+import { DuplicateExperimentModal } from 'products/experiments/frontend/components/DuplicateExperimentModal'
+import { ExperimentVelocityStats } from 'products/experiments/frontend/components/ExperimentVelocityStats'
 import { StatusTag } from 'products/experiments/frontend/components/StatusTag'
 import { experimentsEmptyState } from 'products/experiments/frontend/emptyState/experimentsEmptyState'
 /**

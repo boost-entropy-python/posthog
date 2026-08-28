@@ -19982,6 +19982,7 @@ export namespace Schemas {
 
     /**
      * * `text` - text
+     * * `link` - link
      * * `number` - number
      * * `currency` - currency
      * * `percent` - percent
@@ -19995,6 +19996,7 @@ export namespace Schemas {
 
     export const CustomPropertyDisplayTypeEnum = {
       Text: 'text',
+      Link: 'link',
       Number: 'number',
       Currency: 'currency',
       Percent: 'percent',
@@ -20281,9 +20283,10 @@ export namespace Schemas {
          * @nullable
          */
       description?: string | null;
-      /** How the property is interpreted and rendered: 'text', 'number', 'currency', 'percent', 'date', 'datetime', 'boolean', or 'select'.
+      /** How the property is interpreted and rendered: 'text', 'link', 'number', 'currency', 'percent', 'date', 'datetime', 'boolean', or 'select'. Links require an HTTP or HTTPS URL.
        *
        * * `text` - text
+       * * `link` - link
        * * `number` - number
        * * `currency` - currency
        * * `percent` - percent
@@ -20417,7 +20420,7 @@ export namespace Schemas {
     export interface CustomPropertyValueWrite {
       /** UUID of the custom property definition whose value to set for this account. */
       definition: string;
-      /** Value to store, matching the definition's type: a number for number/currency/percent, a boolean for boolean, an ISO-8601 string for date/datetime, or text for text properties. */
+      /** Value to store, matching the definition's type: a number for number/currency/percent, a boolean for boolean, an ISO-8601 string for date/datetime, an HTTP or HTTPS URL for link properties, or text for text properties. */
       value: string | number | boolean;
     }
 
@@ -33316,7 +33319,7 @@ export namespace Schemas {
     export interface FeatureFlagFilterPropertyGenericSchema {
       /** Property key used in this feature flag condition. */
       key: string;
-      /** Property filter type. Common values are 'person' and 'cohort'.
+      /** Property filter type. Set it on every property. Use `group` with `group_type_index` to filter on a group's properties.
        *
        * * `cohort` - cohort
        * * `person` - person
@@ -33328,7 +33331,7 @@ export namespace Schemas {
          */
       cohort_name?: string | null;
       /**
-         * Group type index when using group-based filters.
+         * Group type index a `group` filter reads properties from. Defaults to the condition set's `aggregation_group_type_index`.
          * @nullable
          */
       group_type_index?: number | null;
@@ -33356,7 +33359,7 @@ export namespace Schemas {
     export interface FeatureFlagFilterPropertyExistsSchema {
       /** Property key used in this feature flag condition. */
       key: string;
-      /** Property filter type. Common values are 'person' and 'cohort'.
+      /** Property filter type. Set it on every property. Use `group` with `group_type_index` to filter on a group's properties.
        *
        * * `cohort` - cohort
        * * `person` - person
@@ -33368,7 +33371,7 @@ export namespace Schemas {
          */
       cohort_name?: string | null;
       /**
-         * Group type index when using group-based filters.
+         * Group type index a `group` filter reads properties from. Defaults to the condition set's `aggregation_group_type_index`.
          * @nullable
          */
       group_type_index?: number | null;
@@ -33384,7 +33387,7 @@ export namespace Schemas {
     export interface FeatureFlagFilterPropertyDateSchema {
       /** Property key used in this feature flag condition. */
       key: string;
-      /** Property filter type. Common values are 'person' and 'cohort'.
+      /** Property filter type. Set it on every property. Use `group` with `group_type_index` to filter on a group's properties.
        *
        * * `cohort` - cohort
        * * `person` - person
@@ -33396,7 +33399,7 @@ export namespace Schemas {
          */
       cohort_name?: string | null;
       /**
-         * Group type index when using group-based filters.
+         * Group type index a `group` filter reads properties from. Defaults to the condition set's `aggregation_group_type_index`.
          * @nullable
          */
       group_type_index?: number | null;
@@ -33439,7 +33442,7 @@ export namespace Schemas {
     export interface FeatureFlagFilterPropertySemverSchema {
       /** Property key used in this feature flag condition. */
       key: string;
-      /** Property filter type. Common values are 'person' and 'cohort'.
+      /** Property filter type. Set it on every property. Use `group` with `group_type_index` to filter on a group's properties.
        *
        * * `cohort` - cohort
        * * `person` - person
@@ -33451,7 +33454,7 @@ export namespace Schemas {
          */
       cohort_name?: string | null;
       /**
-         * Group type index when using group-based filters.
+         * Group type index a `group` filter reads properties from. Defaults to the condition set's `aggregation_group_type_index`.
          * @nullable
          */
       group_type_index?: number | null;
@@ -33486,7 +33489,7 @@ export namespace Schemas {
     export interface FeatureFlagFilterPropertyMultiContainsSchema {
       /** Property key used in this feature flag condition. */
       key: string;
-      /** Property filter type. Common values are 'person' and 'cohort'.
+      /** Property filter type. Set it on every property. Use `group` with `group_type_index` to filter on a group's properties.
        *
        * * `cohort` - cohort
        * * `person` - person
@@ -33498,7 +33501,7 @@ export namespace Schemas {
          */
       cohort_name?: string | null;
       /**
-         * Group type index when using group-based filters.
+         * Group type index a `group` filter reads properties from. Defaults to the condition set's `aggregation_group_type_index`.
          * @nullable
          */
       group_type_index?: number | null;
@@ -33546,7 +33549,7 @@ export namespace Schemas {
          */
       cohort_name?: string | null;
       /**
-         * Group type index when using group-based filters.
+         * Group type index a `group` filter reads properties from. Defaults to the condition set's `aggregation_group_type_index`.
          * @nullable
          */
       group_type_index?: number | null;
@@ -33592,7 +33595,7 @@ export namespace Schemas {
          */
       cohort_name?: string | null;
       /**
-         * Group type index when using group-based filters.
+         * Group type index a `group` filter reads properties from. Defaults to the condition set's `aggregation_group_type_index`.
          * @nullable
          */
       group_type_index?: number | null;
@@ -34315,6 +34318,8 @@ export namespace Schemas {
      * * `cold_run` - Cold Run
      * * `stale_refresh` - Stale Refresh
      * * `auto_refresh` - Auto Refresh
+     * * `experiment_config_change` - Experiment Config Change
+     * * `metric_config_change` - Metric Config Change
      * * `config_change` - Config Change
      * * `experiment_launch` - Experiment Launch
      * * `experiment_stop` - Experiment Stop
@@ -34329,6 +34334,8 @@ export namespace Schemas {
       ColdRun: 'cold_run',
       StaleRefresh: 'stale_refresh',
       AutoRefresh: 'auto_refresh',
+      ExperimentConfigChange: 'experiment_config_change',
+      MetricConfigChange: 'metric_config_change',
       ConfigChange: 'config_change',
       ExperimentLaunch: 'experiment_launch',
       ExperimentStop: 'experiment_stop',
@@ -34414,6 +34421,8 @@ export namespace Schemas {
        * * `cold_run` - Cold Run
        * * `stale_refresh` - Stale Refresh
        * * `auto_refresh` - Auto Refresh
+       * * `experiment_config_change` - Experiment Config Change
+       * * `metric_config_change` - Metric Config Change
        * * `config_change` - Config Change
        * * `experiment_launch` - Experiment Launch
        * * `experiment_stop` - Experiment Stop
@@ -39002,6 +39011,11 @@ export namespace Schemas {
       readonly account: FeatureRequestAccount;
       /** Active account links visible to the caller, with account-specific evidence. */
       readonly account_links: readonly FeatureRequestAccountLink[];
+      /**
+         * Total evidence items recorded across visible account links.
+         * @minimum 0
+         */
+      readonly evidence_count: number;
       /** Product areas affected by this request. */
       readonly product_areas: readonly FeatureRequestProductArea[];
       /**
@@ -59737,9 +59751,10 @@ export namespace Schemas {
          * @nullable
          */
       description?: string | null;
-      /** How the property is interpreted and rendered: 'text', 'number', 'currency', 'percent', 'date', 'datetime', 'boolean', or 'select'.
+      /** How the property is interpreted and rendered: 'text', 'link', 'number', 'currency', 'percent', 'date', 'datetime', 'boolean', or 'select'. Links require an HTTP or HTTPS URL.
        *
        * * `text` - text
+       * * `link` - link
        * * `number` - number
        * * `currency` - currency
        * * `percent` - percent
@@ -72870,6 +72885,8 @@ export namespace Schemas {
        * * `cold_run` - Cold Run
        * * `stale_refresh` - Stale Refresh
        * * `auto_refresh` - Auto Refresh
+       * * `experiment_config_change` - Experiment Config Change
+       * * `metric_config_change` - Metric Config Change
        * * `config_change` - Config Change
        * * `experiment_launch` - Experiment Launch
        * * `experiment_stop` - Experiment Stop
@@ -87184,6 +87201,23 @@ export namespace Schemas {
       groupBy?: _MetricGroupBy[];
     }
 
+    export interface _MetricErrorSpike {
+      /** When the error spike was detected, ISO 8601. */
+      detected_at: string;
+      /** Error Tracking issue that spiked. */
+      issue_id: string;
+      /**
+         * Issue name, if one is set.
+         * @nullable
+         */
+      issue_name: string | null;
+    }
+
+    export interface _MetricErrorSpikesResponse {
+      /** Error Tracking issue spikes detected in the window, newest first. Team-wide: not yet scoped to a specific metric's service. */
+      results: _MetricErrorSpike[];
+    }
+
     /**
      * Per-emission attributes (high-cardinality labels on the data point).
      */
@@ -92543,6 +92577,16 @@ export namespace Schemas {
      * * `priority` - Priority: low to high
      * * `title` - Title: A to Z
      * * `-title` - Title: Z to A
+     * * `account` - Accounts: A to Z
+     * * `-account` - Accounts: Z to A
+     * * `product_area` - Product areas: A to Z
+     * * `-product_area` - Product areas: Z to A
+     * * `status` - Status: A to Z
+     * * `-status` - Status: Z to A
+     * * `created_by` - Created by: A to Z
+     * * `-created_by` - Created by: Z to A
+     * * `evidence_count` - Evidence: low to high
+     * * `-evidence_count` - Evidence: high to low
      * @minLength 1
      */
     request_ordering?: string;
@@ -95606,6 +95650,17 @@ export namespace Schemas {
      * @maxLength 255
      */
     search?: string;
+    };
+
+    export type MetricsErrorSpikesRetrieveParams = {
+    /**
+     * Lower bound (inclusive) for the spike window. ISO 8601.
+     */
+    dateFrom: string;
+    /**
+     * Upper bound (exclusive) for the spike window. Defaults to now if omitted.
+     */
+    dateTo?: string;
     };
 
     export type MetricsValuesRetrieveParams = {
