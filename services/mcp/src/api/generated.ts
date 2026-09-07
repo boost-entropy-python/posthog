@@ -14082,6 +14082,11 @@ export namespace Schemas {
       current_period_end: string | null;
     }
 
+    export interface BillingTeamOptionsResponse {
+      /** Project ids that appear in the organization's usage reports. */
+      team_id_options: number[];
+    }
+
     /**
      * * `type` - type
      * * `team` - team
@@ -14112,6 +14117,7 @@ export namespace Schemas {
       results: BillingTimeSeriesPoint[];
       team_id_options?: number[];
       next?: string;
+      total_count?: number;
     }
 
     /**
@@ -48764,6 +48770,13 @@ export namespace Schemas {
      * * `posthog-kmp` - posthog-kmp
      * * `posthog-dotnet` - posthog-dotnet
      * * `posthog-elixir` - posthog-elixir
+     * * `posthog-unity` - posthog-unity
+     * * `posthog-node-mcp` - posthog-node-mcp
+     * * `posthog-python-mcp` - posthog-python-mcp
+     * * `posthog-edge` - posthog-edge
+     * * `posthog-convex` - posthog-convex
+     * * `posthog-rails` - posthog-rails
+     * * `posthog-aspnetcore` - posthog-aspnetcore
      */
     export type LibEnum = typeof LibEnum[keyof typeof LibEnum];
 
@@ -48784,6 +48797,13 @@ export namespace Schemas {
       PosthogKmp: 'posthog-kmp',
       PosthogDotnet: 'posthog-dotnet',
       PosthogElixir: 'posthog-elixir',
+      PosthogUnity: 'posthog-unity',
+      PosthogNodeMcp: 'posthog-node-mcp',
+      PosthogPythonMcp: 'posthog-python-mcp',
+      PosthogEdge: 'posthog-edge',
+      PosthogConvex: 'posthog-convex',
+      PosthogRails: 'posthog-rails',
+      PosthogAspnetcore: 'posthog-aspnetcore',
     } as const;
 
     /**
@@ -58342,7 +58362,10 @@ export namespace Schemas {
       config?: SignalSourceConfigConfig;
       readonly created_at: string;
       readonly updated_at: string;
-      /** @nullable */
+      /**
+         * Sync state of the warehouse import behind this source: `running`, `failed`, or `completed`. Null for a source that imports nothing from the warehouse, for an import that has never synced, and when the sync state could not be read.
+         * @nullable
+         */
       readonly status: string | null;
     }
 
@@ -67619,7 +67642,10 @@ export namespace Schemas {
       config?: PatchedSignalSourceConfigConfig;
       readonly created_at?: string;
       readonly updated_at?: string;
-      /** @nullable */
+      /**
+         * Sync state of the warehouse import behind this source: `running`, `failed`, or `completed`. Null for a source that imports nothing from the warehouse, for an import that has never synced, and when the sync state could not be read.
+         * @nullable
+         */
       readonly status?: string | null;
     }
 
@@ -78320,7 +78346,14 @@ export namespace Schemas {
        * * `posthog-react-native` - posthog-react-native
        * * `posthog-kmp` - posthog-kmp
        * * `posthog-dotnet` - posthog-dotnet
-       * * `posthog-elixir` - posthog-elixir */
+       * * `posthog-elixir` - posthog-elixir
+       * * `posthog-unity` - posthog-unity
+       * * `posthog-node-mcp` - posthog-node-mcp
+       * * `posthog-python-mcp` - posthog-python-mcp
+       * * `posthog-edge` - posthog-edge
+       * * `posthog-convex` - posthog-convex
+       * * `posthog-rails` - posthog-rails
+       * * `posthog-aspnetcore` - posthog-aspnetcore */
       lib: LibEnum;
       /** Human-readable SDK name matching the SDK Health UI (e.g. 'Python', 'Node.js', 'Web', 'iOS'). */
       readable_name: string;
@@ -91439,6 +91472,12 @@ export namespace Schemas {
 
     export type BillingSpendRetrieveParams = {
     /**
+     * The `next` cursor from the previous page. Opaque. Ignored without page_size.
+     * @maxLength 512
+     * @nullable
+     */
+    after?: string | null;
+    /**
      * JSON-encoded array of breakdown dimensions. Valid values are "type" and "team", for example ["type","team"]. Omit for a single aggregate series.
      * @nullable
      */
@@ -91452,6 +91491,13 @@ export namespace Schemas {
      */
     interval?: string | null;
     /**
+     * Return at most this many series, ranked by total, with a `next` cursor for the page after. A caller that pages never approaches the size this endpoint refuses oversized breakdowns at. Requires a project breakdown.
+     * @minimum 1
+     * @maximum 1000
+     * @nullable
+     */
+    page_size?: number | null;
+    /**
      * @nullable
      */
     start_date?: string | null;
@@ -91461,7 +91507,64 @@ export namespace Schemas {
      */
     team_ids?: string | null;
     /**
-     * JSON-encoded array of usage type identifiers to filter on. Valid values: event_count_in_period, exceptions_captured_in_period, recording_count_in_period, rows_synced_in_period, free_historical_rows_synced_in_period, survey_responses_count_in_period, mobile_recording_count_in_period, billable_feature_flag_requests_count_in_period, enhanced_persons_event_count_in_period, ai_event_count_in_period, cdp_billable_invocations_in_period, rows_exported_in_period, ai_credits_used_in_period, signals_credits_used_in_period, posthog_code_credits_used_in_period, posthog_code_token_credits_used_in_period, sandbox_compute_credits_used_in_period, sandbox_compute_cpu_millicore_seconds_in_period, sandbox_compute_memory_mib_seconds_in_period, workflow_emails_sent_in_period, workflow_billable_invocations_in_period, logs_mb_in_period, logs_retention_30d_mb_in_period, replay_vision_credits_used_in_period, data_pipelines, group_analytics. E.g. ["event_count_in_period","recording_count_in_period"]. Omit for all types.
+     * With a project breakdown, return only this many highest-usage projects and fold the rest into a single 'all other projects' series, so the totals still reconcile. Omit it to get every project.
+     * @minimum 1
+     * @maximum 200
+     * @nullable
+     */
+    top_projects?: number | null;
+    /**
+     * JSON-encoded array of usage type identifiers to filter on. Valid values: event_count_in_period, exceptions_captured_in_period, recording_count_in_period, rows_synced_in_period, free_historical_rows_synced_in_period, survey_responses_count_in_period, mobile_recording_count_in_period, mobile_billable_recording_count_in_period, billable_feature_flag_requests_count_in_period, enhanced_persons_event_count_in_period, ai_event_count_in_period, cdp_billable_invocations_in_period, rows_exported_in_period, ai_credits_used_in_period, signals_credits_used_in_period, posthog_code_credits_used_in_period, posthog_code_token_credits_used_in_period, sandbox_compute_credits_used_in_period, sandbox_compute_cpu_millicore_seconds_in_period, sandbox_compute_memory_mib_seconds_in_period, workflow_emails_sent_in_period, workflow_billable_invocations_in_period, logs_mb_in_period, logs_retention_30d_mb_in_period, replay_vision_credits_used_in_period, data_pipelines, group_analytics. E.g. ["event_count_in_period","recording_count_in_period"]. Omit for all types.
+     * @nullable
+     */
+    usage_types?: string | null;
+    };
+
+    export type BillingSpendExportRetrieveParams = {
+    /**
+     * The `next` cursor from the previous page. Opaque. Ignored without page_size.
+     * @maxLength 512
+     * @nullable
+     */
+    after?: string | null;
+    /**
+     * JSON-encoded array of breakdown dimensions. Valid values are "type" and "team", for example ["type","team"]. Omit for a single aggregate series.
+     * @nullable
+     */
+    breakdowns?: string | null;
+    /**
+     * @nullable
+     */
+    end_date?: string | null;
+    /**
+     * @nullable
+     */
+    interval?: string | null;
+    /**
+     * Return at most this many series, ranked by total, with a `next` cursor for the page after. A caller that pages never approaches the size this endpoint refuses oversized breakdowns at. Requires a project breakdown.
+     * @minimum 1
+     * @maximum 1000
+     * @nullable
+     */
+    page_size?: number | null;
+    /**
+     * @nullable
+     */
+    start_date?: string | null;
+    /**
+     * JSON-encoded array of numeric team/project IDs to filter on, for example [1,2]. Omit for all projects available to the caller. Full billing-access callers can read all organization projects; member read-only callers are limited to visible projects and any project scope on their token.
+     * @nullable
+     */
+    team_ids?: string | null;
+    /**
+     * With a project breakdown, return only this many highest-usage projects and fold the rest into a single 'all other projects' series, so the totals still reconcile. Omit it to get every project.
+     * @minimum 1
+     * @maximum 200
+     * @nullable
+     */
+    top_projects?: number | null;
+    /**
+     * JSON-encoded array of usage type identifiers to filter on. Valid values: event_count_in_period, exceptions_captured_in_period, recording_count_in_period, rows_synced_in_period, free_historical_rows_synced_in_period, survey_responses_count_in_period, mobile_recording_count_in_period, mobile_billable_recording_count_in_period, billable_feature_flag_requests_count_in_period, enhanced_persons_event_count_in_period, ai_event_count_in_period, cdp_billable_invocations_in_period, rows_exported_in_period, ai_credits_used_in_period, signals_credits_used_in_period, posthog_code_credits_used_in_period, posthog_code_token_credits_used_in_period, sandbox_compute_credits_used_in_period, sandbox_compute_cpu_millicore_seconds_in_period, sandbox_compute_memory_mib_seconds_in_period, workflow_emails_sent_in_period, workflow_billable_invocations_in_period, logs_mb_in_period, logs_retention_30d_mb_in_period, replay_vision_credits_used_in_period, data_pipelines, group_analytics. E.g. ["event_count_in_period","recording_count_in_period"]. Omit for all types.
      * @nullable
      */
     usage_types?: string | null;
@@ -91469,6 +91572,12 @@ export namespace Schemas {
 
     export type BillingUsageRetrieveParams = {
     /**
+     * The `next` cursor from the previous page. Opaque. Ignored without page_size.
+     * @maxLength 512
+     * @nullable
+     */
+    after?: string | null;
+    /**
      * JSON-encoded array of breakdown dimensions. Valid values are "type" and "team", for example ["type","team"]. Omit for a single aggregate series.
      * @nullable
      */
@@ -91482,6 +91591,13 @@ export namespace Schemas {
      */
     interval?: string | null;
     /**
+     * Return at most this many series, ranked by total, with a `next` cursor for the page after. A caller that pages never approaches the size this endpoint refuses oversized breakdowns at. Requires a project breakdown.
+     * @minimum 1
+     * @maximum 1000
+     * @nullable
+     */
+    page_size?: number | null;
+    /**
      * @nullable
      */
     start_date?: string | null;
@@ -91491,7 +91607,64 @@ export namespace Schemas {
      */
     team_ids?: string | null;
     /**
-     * JSON-encoded array of usage type identifiers to filter on. Valid values: event_count_in_period, exceptions_captured_in_period, recording_count_in_period, rows_synced_in_period, free_historical_rows_synced_in_period, survey_responses_count_in_period, mobile_recording_count_in_period, billable_feature_flag_requests_count_in_period, enhanced_persons_event_count_in_period, ai_event_count_in_period, cdp_billable_invocations_in_period, rows_exported_in_period, ai_credits_used_in_period, signals_credits_used_in_period, posthog_code_credits_used_in_period, posthog_code_token_credits_used_in_period, sandbox_compute_credits_used_in_period, sandbox_compute_cpu_millicore_seconds_in_period, sandbox_compute_memory_mib_seconds_in_period, workflow_emails_sent_in_period, workflow_billable_invocations_in_period, logs_mb_in_period, logs_retention_30d_mb_in_period, replay_vision_credits_used_in_period, data_pipelines, group_analytics. E.g. ["event_count_in_period","recording_count_in_period"]. Omit for all types.
+     * With a project breakdown, return only this many highest-usage projects and fold the rest into a single 'all other projects' series, so the totals still reconcile. Omit it to get every project.
+     * @minimum 1
+     * @maximum 200
+     * @nullable
+     */
+    top_projects?: number | null;
+    /**
+     * JSON-encoded array of usage type identifiers to filter on. Valid values: event_count_in_period, exceptions_captured_in_period, recording_count_in_period, rows_synced_in_period, free_historical_rows_synced_in_period, survey_responses_count_in_period, mobile_recording_count_in_period, mobile_billable_recording_count_in_period, billable_feature_flag_requests_count_in_period, enhanced_persons_event_count_in_period, ai_event_count_in_period, cdp_billable_invocations_in_period, rows_exported_in_period, ai_credits_used_in_period, signals_credits_used_in_period, posthog_code_credits_used_in_period, posthog_code_token_credits_used_in_period, sandbox_compute_credits_used_in_period, sandbox_compute_cpu_millicore_seconds_in_period, sandbox_compute_memory_mib_seconds_in_period, workflow_emails_sent_in_period, workflow_billable_invocations_in_period, logs_mb_in_period, logs_retention_30d_mb_in_period, replay_vision_credits_used_in_period, data_pipelines, group_analytics. E.g. ["event_count_in_period","recording_count_in_period"]. Omit for all types.
+     * @nullable
+     */
+    usage_types?: string | null;
+    };
+
+    export type BillingUsageExportRetrieveParams = {
+    /**
+     * The `next` cursor from the previous page. Opaque. Ignored without page_size.
+     * @maxLength 512
+     * @nullable
+     */
+    after?: string | null;
+    /**
+     * JSON-encoded array of breakdown dimensions. Valid values are "type" and "team", for example ["type","team"]. Omit for a single aggregate series.
+     * @nullable
+     */
+    breakdowns?: string | null;
+    /**
+     * @nullable
+     */
+    end_date?: string | null;
+    /**
+     * @nullable
+     */
+    interval?: string | null;
+    /**
+     * Return at most this many series, ranked by total, with a `next` cursor for the page after. A caller that pages never approaches the size this endpoint refuses oversized breakdowns at. Requires a project breakdown.
+     * @minimum 1
+     * @maximum 1000
+     * @nullable
+     */
+    page_size?: number | null;
+    /**
+     * @nullable
+     */
+    start_date?: string | null;
+    /**
+     * JSON-encoded array of numeric team/project IDs to filter on, for example [1,2]. Omit for all projects available to the caller. Full billing-access callers can read all organization projects; member read-only callers are limited to visible projects and any project scope on their token.
+     * @nullable
+     */
+    team_ids?: string | null;
+    /**
+     * With a project breakdown, return only this many highest-usage projects and fold the rest into a single 'all other projects' series, so the totals still reconcile. Omit it to get every project.
+     * @minimum 1
+     * @maximum 200
+     * @nullable
+     */
+    top_projects?: number | null;
+    /**
+     * JSON-encoded array of usage type identifiers to filter on. Valid values: event_count_in_period, exceptions_captured_in_period, recording_count_in_period, rows_synced_in_period, free_historical_rows_synced_in_period, survey_responses_count_in_period, mobile_recording_count_in_period, mobile_billable_recording_count_in_period, billable_feature_flag_requests_count_in_period, enhanced_persons_event_count_in_period, ai_event_count_in_period, cdp_billable_invocations_in_period, rows_exported_in_period, ai_credits_used_in_period, signals_credits_used_in_period, posthog_code_credits_used_in_period, posthog_code_token_credits_used_in_period, sandbox_compute_credits_used_in_period, sandbox_compute_cpu_millicore_seconds_in_period, sandbox_compute_memory_mib_seconds_in_period, workflow_emails_sent_in_period, workflow_billable_invocations_in_period, logs_mb_in_period, logs_retention_30d_mb_in_period, replay_vision_credits_used_in_period, data_pipelines, group_analytics. E.g. ["event_count_in_period","recording_count_in_period"]. Omit for all types.
      * @nullable
      */
     usage_types?: string | null;
@@ -101996,11 +102169,11 @@ export namespace Schemas {
      */
     backfill_id?: string;
     /**
-     * Only observations created at or after this time. Accepts ISO 8601 or a relative date like `-7d`; values without an explicit offset are interpreted in the project's timezone.
+     * Only observations created at or after this time. Accepts ISO 8601, a relative date like `-7d`, or `now`; values without an explicit offset are interpreted in the project's timezone.
      */
     date_from?: string;
     /**
-     * Only observations created at or before this time. Accepts ISO 8601 or a relative date like `-1d`; date-only values include the whole day, interpreted in the project's timezone.
+     * Only observations created at or before this time. Accepts ISO 8601, a relative date like `-1d`, or `now` for the current time; omit it to query through the current time. Date-only values include the whole day, interpreted in the project's timezone.
      */
     date_to?: string;
     /**
@@ -102047,12 +102220,12 @@ export namespace Schemas {
 
     export type VisionObservationsSearchRetrieveParams = {
     /**
-     * Only observations analyzed at or after this time. Accepts ISO 8601 or a relative date like `-7d`; values without an explicit offset are interpreted in the project's timezone.
+     * Only observations analyzed at or after this time. Accepts ISO 8601, a relative date like `-7d`, or `now`; values without an explicit offset are interpreted in the project's timezone.
      * @minLength 1
      */
     date_from?: string;
     /**
-     * Only observations analyzed at or before this time. Accepts ISO 8601 or a relative date like `-1d`; date-only values include the whole day, interpreted in the project's timezone.
+     * Only observations analyzed at or before this time. Accepts ISO 8601, a relative date like `-1d`, or `now` for the current time; omit it to query through the current time. Date-only values include the whole day, interpreted in the project's timezone.
      * @minLength 1
      */
     date_to?: string;
@@ -102184,11 +102357,11 @@ export namespace Schemas {
      */
     backfill_id?: string;
     /**
-     * Only observations created at or after this time. Accepts ISO 8601 or a relative date like `-7d`; values without an explicit offset are interpreted in the project's timezone.
+     * Only observations created at or after this time. Accepts ISO 8601, a relative date like `-7d`, or `now`; values without an explicit offset are interpreted in the project's timezone.
      */
     date_from?: string;
     /**
-     * Only observations created at or before this time. Accepts ISO 8601 or a relative date like `-1d`; date-only values include the whole day, interpreted in the project's timezone.
+     * Only observations created at or before this time. Accepts ISO 8601, a relative date like `-1d`, or `now` for the current time; omit it to query through the current time. Date-only values include the whole day, interpreted in the project's timezone.
      */
     date_to?: string;
     /**
@@ -102247,11 +102420,11 @@ export namespace Schemas {
      */
     backfill_id?: string;
     /**
-     * Only observations created at or after this time. Accepts ISO 8601 or a relative date like `-7d`; values without an explicit offset are interpreted in the project's timezone.
+     * Only observations created at or after this time. Accepts ISO 8601, a relative date like `-7d`, or `now`; values without an explicit offset are interpreted in the project's timezone.
      */
     date_from?: string;
     /**
-     * Only observations created at or before this time. Accepts ISO 8601 or a relative date like `-1d`; date-only values include the whole day, interpreted in the project's timezone.
+     * Only observations created at or before this time. Accepts ISO 8601, a relative date like `-1d`, or `now` for the current time; omit it to query through the current time. Date-only values include the whole day, interpreted in the project's timezone.
      */
     date_to?: string;
     /**
@@ -102302,11 +102475,11 @@ export namespace Schemas {
      */
     backfill_id?: string;
     /**
-     * Only observations created at or after this time. Accepts ISO 8601 or a relative date like `-7d`; values without an explicit offset are interpreted in the project's timezone.
+     * Only observations created at or after this time. Accepts ISO 8601, a relative date like `-7d`, or `now`; values without an explicit offset are interpreted in the project's timezone.
      */
     date_from?: string;
     /**
-     * Only observations created at or before this time. Accepts ISO 8601 or a relative date like `-1d`; date-only values include the whole day, interpreted in the project's timezone.
+     * Only observations created at or before this time. Accepts ISO 8601, a relative date like `-1d`, or `now` for the current time; omit it to query through the current time. Date-only values include the whole day, interpreted in the project's timezone.
      */
     date_to?: string;
     /**
