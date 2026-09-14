@@ -44091,6 +44091,22 @@ export namespace Schemas {
          * @nullable
          */
       readonly action_redirects: HogFlowActionRedirects;
+      /**
+         * When PostHog paused this workflow's email automatically because its spam complaint or hard bounce rate crossed a threshold. Null when sending is not paused. Read-only: only the resume_email_sending endpoint clears a pause, so a normal update or publish can't lift it.
+         * @nullable
+         */
+      readonly email_sending_paused_at: string | null;
+      /** Plain-language reason for the pause, naming the signal and the window. Empty when not paused. */
+      readonly email_sending_paused_reason: string;
+      /** Who paused it: "auto" for the deliverability detector, "staff" for PostHog staff. A staff pause can only be resumed by staff, so the resume endpoint refuses it. Empty when not paused. */
+      readonly email_sending_paused_by: string;
+      /** True when only PostHog staff can lift the current pause: staff placed it, or it landed shortly after a resume, so another self-serve resume is not offered. False when not paused or when the resume endpoint would accept the caller. */
+      readonly email_sending_pause_requires_support: boolean;
+      /**
+         * When sending was last resumed. Every detector window starts after this, so resuming does not immediately re-trip on the feedback that caused the pause. Null if never paused.
+         * @nullable
+         */
+      readonly email_sending_resumed_at: string | null;
     }
 
     /**
@@ -44541,6 +44557,22 @@ export namespace Schemas {
          * @nullable
          */
       readonly action_redirects: HogFlowUpdateActionRedirects;
+      /**
+         * When PostHog paused this workflow's email automatically because its spam complaint or hard bounce rate crossed a threshold. Null when sending is not paused. Read-only: only the resume_email_sending endpoint clears a pause, so a normal update or publish can't lift it.
+         * @nullable
+         */
+      readonly email_sending_paused_at: string | null;
+      /** Plain-language reason for the pause, naming the signal and the window. Empty when not paused. */
+      readonly email_sending_paused_reason: string;
+      /** Who paused it: "auto" for the deliverability detector, "staff" for PostHog staff. A staff pause can only be resumed by staff, so the resume endpoint refuses it. Empty when not paused. */
+      readonly email_sending_paused_by: string;
+      /** True when only PostHog staff can lift the current pause: staff placed it, or it landed shortly after a resume, so another self-serve resume is not offered. False when not paused or when the resume endpoint would accept the caller. */
+      readonly email_sending_pause_requires_support: boolean;
+      /**
+         * When sending was last resumed. Every detector window starts after this, so resuming does not immediately re-trip on the feedback that caused the pause. Null if never paused.
+         * @nullable
+         */
+      readonly email_sending_resumed_at: string | null;
     }
 
     /**
@@ -66271,6 +66303,22 @@ export namespace Schemas {
          * @nullable
          */
       readonly action_redirects?: PatchedHogFlowUpdateActionRedirects;
+      /**
+         * When PostHog paused this workflow's email automatically because its spam complaint or hard bounce rate crossed a threshold. Null when sending is not paused. Read-only: only the resume_email_sending endpoint clears a pause, so a normal update or publish can't lift it.
+         * @nullable
+         */
+      readonly email_sending_paused_at?: string | null;
+      /** Plain-language reason for the pause, naming the signal and the window. Empty when not paused. */
+      readonly email_sending_paused_reason?: string;
+      /** Who paused it: "auto" for the deliverability detector, "staff" for PostHog staff. A staff pause can only be resumed by staff, so the resume endpoint refuses it. Empty when not paused. */
+      readonly email_sending_paused_by?: string;
+      /** True when only PostHog staff can lift the current pause: staff placed it, or it landed shortly after a resume, so another self-serve resume is not offered. False when not paused or when the resume endpoint would accept the caller. */
+      readonly email_sending_pause_requires_support?: boolean;
+      /**
+         * When sending was last resumed. Every detector window starts after this, so resuming does not immediately re-trip on the feedback that caused the pause. Null if never paused.
+         * @nullable
+         */
+      readonly email_sending_resumed_at?: string | null;
     }
 
     /**
@@ -67799,6 +67847,18 @@ export namespace Schemas {
        * * `opt_out` - Opt Out
        * * `opt_in` - Opt In */
       email_tracking_consent_mode?: EmailTrackingConsentModeEnum;
+      /**
+         * How many AI tasks one workflow can create in a rolling 24 hours. Null uses the default of 100; zero pauses task creation for every workflow in the project. Support raises the limit above 500.
+         * @minimum 0
+         * @nullable
+         */
+      workflow_task_rate_limit_per_day?: number | null;
+      /**
+         * How many AI tasks all workflows in the project can create together in a rolling 24 hours. Null uses the default of 500; zero pauses task creation for the project. Support raises the limit above 2500.
+         * @minimum 0
+         * @nullable
+         */
+      workflow_task_team_rate_limit_per_day?: number | null;
     }
 
     export interface TeamFeatureFlagPolicyConfig {
@@ -89204,6 +89264,15 @@ export namespace Schemas {
       readonly hog_flow_id: string;
       /** Display name of the workflow; empty for unnamed workflows. */
       readonly hog_flow_name: string;
+      /** True when PostHog paused this workflow's email automatically because its complaint or hard bounce rate crossed a threshold. Independent of the AWS tenant verdict and of the project-wide suspension. */
+      readonly email_sending_paused: boolean;
+      /**
+         * When the pause started; null when not paused.
+         * @nullable
+         */
+      readonly email_sending_paused_at: string | null;
+      /** Plain-language reason for the pause, naming the signal and the window. Empty when not paused. */
+      readonly email_sending_paused_reason: string;
     }
 
     export interface TeamEmailReputationResponse {
@@ -91227,6 +91296,26 @@ export namespace Schemas {
       PullRequest: 'pull_request',
     } as const;
 
+    /**
+     * Whether PostHog paused this one workflow's email sending, and why.
+     */
+    export interface WorkflowEmailPauseStatus {
+      /** True while this workflow's email is paused because its spam complaint or hard bounce rate crossed a threshold. Other workflows in the project keep sending. */
+      readonly email_sending_paused: boolean;
+      /**
+         * When the pause started; null when not paused.
+         * @nullable
+         */
+      readonly email_sending_paused_at: string | null;
+      /** Plain-language reason for the pause, naming the signal and the window. Empty when not paused. */
+      readonly email_sending_paused_reason: string;
+      /**
+         * When sending was last resumed. Detector windows start after this, so resuming does not immediately re-trip on older feedback. Null if never paused.
+         * @nullable
+         */
+      readonly email_sending_resumed_at: string | null;
+    }
+
     export interface WorkflowHealthBucket {
       /** Bucket start, aligned to the item's granularity (top of hour, midnight, or Monday). */
       bucket_start: string;
@@ -92964,6 +93053,18 @@ export namespace Schemas {
     export interface _MetricNamesResponse {
       /** Distinct metric names ordered by recent activity. */
       results: _MetricName[];
+    }
+
+    export interface _MetricPickerName {
+      /** Metric name as it appears in the team's data. */
+      name: string;
+      /** OTel metric type (gauge, sum, histogram, summary, exponential_histogram). */
+      metric_type: string;
+    }
+
+    export interface _MetricPickerNamesResponse {
+      /** Distinct metric names ordered by recent activity. */
+      results: _MetricPickerName[];
     }
 
     export interface _MetricQueryBody {
@@ -102073,6 +102174,25 @@ export namespace Schemas {
      * Upper bound (exclusive) for the spike window. Defaults to now if omitted.
      */
     dateTo?: string;
+    };
+
+    export type MetricsNamesRetrieveParams = {
+    /**
+     * Max number of names to return. Defaults to 100; maximum 1000.
+     * @minimum 1
+     * @maximum 1000
+     */
+    limit?: number;
+    /**
+     * Comma-separated services to narrow the list to, e.g. `service=web,worker`. Omit for every service. Send it empty to select only series whose sender did not set `service.name`. A service name containing a comma cannot be selected.
+     * @maxLength 1024
+     */
+    service?: string;
+    /**
+     * Substring filter (case-insensitive) applied to metric names.
+     * @maxLength 255
+     */
+    value?: string;
     };
 
     export type MetricsValuesRetrieveParams = {
