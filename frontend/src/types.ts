@@ -5217,6 +5217,8 @@ export interface AppContext {
     switched_team: TeamType['id'] | null
     /** Support flow aid: a staff-only list of users who may be impersonated to access this resource. */
     suggested_users_with_access?: UserBasicType[]
+    /** The project the URL asked for, as an id or a token, when the server refused to switch to it. */
+    project_access_denied?: string | null
     livestream_host?: string
     oauth_application?: OAuthApplicationPublicMetadata
     /** Server-resolved MCP scopes for OAuth consent when the client omits `scope`. */
@@ -6167,6 +6169,8 @@ export enum ActivityScope {
     CANVAS = 'Canvas',
     DASHBOARD = 'Dashboard',
     REPLAY = 'Replay',
+    REPLAY_SCANNER = 'ReplayScanner',
+    VISION_ALERT_CONFIGURATION = 'VisionAlertConfiguration',
     // TODO: doh! we don't need replay and recording
     RECORDING = 'recording',
     EXPERIMENT = 'Experiment',
@@ -6306,16 +6310,6 @@ export interface DataModelingEdge {
 }
 
 export type DataModelingSyncInterval = '15min' | '30min' | '1hour' | '6hour' | '12hour' | '24hour' | '7day' | '30day'
-
-export interface DataModelingDAG {
-    id: string
-    name: string
-    description: string
-    sync_frequency: DataModelingSyncInterval | null
-    node_count: number
-    created_at: string
-    updated_at: string
-}
 
 export interface DataWarehouseSavedQuery {
     /** UUID */

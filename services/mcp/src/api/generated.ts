@@ -3687,7 +3687,7 @@ export namespace Schemas {
       /** Start of the date range. Accepts ISO 8601 timestamps (e.g., 2024-01-15T00:00:00Z) or relative formats: -7d (7 days ago), -2w (2 weeks ago), -1m (1 month ago),
        * -1h (1 hour ago), -1mStart (start of last month), -1yStart (start of last year). */
       date_from?: string | null;
-      /** End of the date range. Same format as date_from. Omit or null for "now". */
+      /** End of the date range. Same format as date_from. Omit or null for "now". A calendar day without a time (2024-01-15) is inclusive: it rounds to the last moment of that day in the project timezone, unless explicitDate is set. */
       date_to?: string | null;
       /** Restrict the query to events occurring on these ISO days of week (1=Monday to 7=Sunday), evaluated in the project timezone. Omit or empty for all days. Only applied by insight queries. */
       daysOfWeek?: DaysOfWeekEnum[] | null;
@@ -25739,6 +25739,7 @@ export namespace Schemas {
      * * `Smartlead` - Smartlead
      * * `Substack` - Substack
      * * `ElectricityMaps` - ElectricityMaps
+     * * `Amplemarket` - Amplemarket
      */
     export type ExternalDataSourceTypeEnum = typeof ExternalDataSourceTypeEnum[keyof typeof ExternalDataSourceTypeEnum];
 
@@ -27083,6 +27084,7 @@ export namespace Schemas {
       Smartlead: 'Smartlead',
       Substack: 'Substack',
       ElectricityMaps: 'ElectricityMaps',
+      Amplemarket: 'Amplemarket',
     } as const;
 
     /**
@@ -28440,7 +28442,8 @@ export namespace Schemas {
        * * `Skio` - Skio
        * * `Smartlead` - Smartlead
        * * `Substack` - Substack
-       * * `ElectricityMaps` - ElectricityMaps */
+       * * `ElectricityMaps` - ElectricityMaps
+       * * `Amplemarket` - Amplemarket */
       source_type: ExternalDataSourceTypeEnum;
     }
 
@@ -30648,7 +30651,8 @@ export namespace Schemas {
        * * `Skio` - Skio
        * * `Smartlead` - Smartlead
        * * `Substack` - Substack
-       * * `ElectricityMaps` - ElectricityMaps */
+       * * `ElectricityMaps` - ElectricityMaps
+       * * `Amplemarket` - Amplemarket */
       readonly source_type: ExternalDataSourceTypeEnum;
       /** Human-readable name to show in the picker (falls back to the source type). */
       readonly label: string;
@@ -37357,7 +37361,7 @@ export namespace Schemas {
     export interface ExperimentWatchHighlight {
       /** The recording to open. Always one of the card's own session_ids. */
       session_id: string;
-      /** Everything this recording carries that earned it the place, ready to render as-is, for example '6 rage clicks, 6 errors' or '1 error, did this 4 times'. Every signal the session shows is listed, so the phrase is the whole picture rather than the single strongest part of it. Friction counts cover the whole session; 'did this N times' counts the card's own event. Not a comparison and not a reason the card exists. */
+      /** Everything this recording carries that earned it the place, ready to render as-is, for example '6 rage clicks, 6 errors' or '1 error, did this 4 times'. Every signal the session shows is listed, so the phrase is the whole picture rather than the single strongest part of it. Friction counts run from the moment the person was exposed to the end of the session, so friction before they met the variant is left out; 'did this N times' counts the card's own event. Not a comparison and not a reason the card exists. */
       reason: string;
     }
 
@@ -37407,9 +37411,9 @@ export namespace Schemas {
     export interface ExperimentWatchVariant {
       /** The variant key. */
       key: string;
-      /** Exposed people the comparison covered for this variant. People rather than sessions because a variant can change how often the flag is evaluated again later, which moves a variant's session count without anyone behaving differently. Each person is read from the first session the comparison covers them in, so every variant gets the same amount of behavior per person. */
+      /** Exposed people the comparison read for this variant: the most recently exposed people, each read from their first session after being exposed. Someone selected who had no session in that horizon is not counted here, so this sits at or below the variant's enrollment between date_from and date_to. People rather than sessions because a variant can change how often the flag is evaluated again later, which moves a variant's session count without anyone behaving differently. One session each, from the moment of exposure on, so every variant gets the same amount of behavior per person. */
       persons: number;
-      /** Exposed sessions those people were seen in, which is more than the comparison reads: it says how much recorded material sits behind the variant. */
+      /** Sessions those people had within 24 hours of being exposed, and before the experiment ended or this request was made, which is more than the comparison reads: it says how much recorded material sits behind the variant. */
       sessions: number;
     }
 
@@ -37462,15 +37466,15 @@ export namespace Schemas {
       multiple_variant_handling: ExperimentWatchMultipleVariantHandlingEnum;
       /** The events the experiment's own metrics count. A card on one of these carries metric_name and must be read as pointing at the experiment's results, which measure the same event over the whole run window with the statistics that go with a result. Cards state no magnitude for exactly this reason, so never turn one into a claim about how the metric moved. */
       metric_events: string[];
-      /** Start of what was actually compared. The requested window is the experiment's run window clamped to its most recent 14 days, but a busy experiment reaches the session ceiling long before that, and this reports where the compared sessions really begin - often hours rather than days back. Display this, not the experiment's own dates. */
+      /** When the earliest compared person was first exposed. The comparison takes the most recently exposed people, newest first, until it has as many as one comparison covers or their first sessions span 14 days of events, so on a busy experiment this is hours rather than days before date_to, and on an experiment that stopped enrolling it can be long before the experiment's end. Display this, not the experiment's own dates. Equal to date_to when nobody has been exposed yet. */
       date_from: string;
-      /** End of what was compared: the experiment's end date, or now while it runs. */
+      /** One minute past the newest compared person's first exposure. Nobody first exposed between date_from and date_to was passed over, so the pair is a stretch of enrollment rather than a hull around scattered people. It bounds who was selected, not who was read: variants[].persons counts only those who then had a session. While an experiment runs this sits about an hour before now, because the newest hour of enrollment is held back until those people's first sessions have finished rather than read half-way through. Sessions reach past it, up to 24 hours after each person's own exposure, so this is not the end of the events that were read. */
       date_to: string;
       /** Whether the project's test-account filters were applied, following the experiment's exposure criteria, the same rule the experiment's recordings list uses. */
       filter_test_accounts: boolean;
       /** Always false. The compared population is the exposed population the experiment's results count, matched to sessions by person, so no stamped-property fallback exists any more. The field stays for compatibility with existing readers. */
       used_exposure_fallback: boolean;
-      /** True when the experiment had more exposed sessions in the requested window than one comparison covers, so the most recent ones were used and date_from is later than the experiment's own window. Every variant is still covered over the same stretch of time. */
+      /** True when more people were exposed than one comparison covers, so the most recently exposed were used and people exposed before date_from were left out. Every variant is still covered over the same stretch of enrollment. Named for the session ceiling it used to report; the name is kept for existing readers. */
       sessions_truncated: boolean;
       /** True when the project has more distinct event names in the window than one comparison can rank, so some were never considered. */
       events_truncated: boolean;
@@ -37480,9 +37484,9 @@ export namespace Schemas {
       max_card_recordings: number;
       /** How many cards were removed because their recordings were already another card's on the same shelf. Nothing was lost: the recordings are all reachable through the cards that stayed. */
       dropped_duplicate_cards: number;
-      /** True when fewer than two variants have min_variant_persons exposed people, so no comparison exists and cards is empty. Show the variants' counts alongside it: an empty shelf presented without them would read as 'the variants behaved identically'. Read empty_reason before telling anyone to check back: this is also true when the variants are empty because the people exposed have no sessions we can see, which empty_reason reports as 'no_session_linked_exposures' and which more time does not fix on its own. */
+      /** True when fewer than two variants have min_variant_persons exposed people, so no comparison exists and cards is empty. Show the variants' counts alongside it: an empty shelf presented without them would read as 'the variants behaved identically'. Read empty_reason and sessions_truncated before telling anyone to check back: this is also true when the variants are empty because the people exposed have no sessions we can see, which empty_reason reports as 'no_session_linked_exposures' and which more time fixes only while those people were exposed less than a day ago. And when sessions_truncated is true, only people exposed between date_from and date_to were compared, so more time helps only if more people are exposed within a stretch that long. */
       too_early: boolean;
-      /** Why cards is empty, and null whenever cards is not empty. Report which of the four happened rather than reporting an empty shelf, because they ask different things of the reader. 'too_early': fewer than two variants have min_variant_persons exposed people, so nothing was compared yet and the answer can still change. 'no_separation': the variants were compared and no event told them apart, which is a result rather than a failure. 'no_recordings': events did tell the variants apart, but no recording behind them can be opened, so the project's session replay sampling and retention are what decide whether this surface can ever show anything. 'no_session_linked_exposures': the experiment has exposed people and none of them has a session we can see between date_from and date_to, so there was nothing to compare. Who counts as exposed is read over the whole run, so the exposures themselves can predate that window: date the claim to the window instead of reporting when anyone was exposed. Two things reach this state, and they ask for different answers: no browser or mobile SDK is capturing events, because sessions exist nowhere else, or the exposed people were last active before the window. Check which one before telling anyone to check back, because more exposures captured the same way yield more of the same. Never fill an empty shelf with the experiment's metrics: shortcut cards to those metrics' events are withheld here for exactly that reason.
+      /** Why cards is empty, and null whenever cards is not empty. Report which of the four happened rather than reporting an empty shelf, because they ask different things of the reader. 'too_early': fewer than two variants have min_variant_persons exposed people, so nothing was compared yet. The answer can still change unless sessions_truncated is true, in which case only the people exposed between date_from and date_to were compared and more time helps only if more people are exposed within a stretch that long; a rollout split that changed during the run lands here too, and the experiment's exposure chart is where that shows. 'no_separation': the variants were compared and no event told them apart, which is a result rather than a failure. 'no_recordings': events did tell the variants apart, but no recording behind them can be opened, so the project's session replay sampling and retention are what decide whether this surface can ever show anything. 'no_session_linked_exposures': the people exposed between date_from and date_to had no session we can see since being exposed, looking up to 24 hours after each exposure, so there was nothing to compare. Two things reach this state, and they ask for different answers: no browser or mobile SDK is capturing events, because sessions exist nowhere else, or the exposed people have not come back. While the experiment runs the read stops at the time of the request, so people exposed less than a day ago are judged on less than a day and can still return. Check which one before telling anyone to check back, because more exposures captured the same way yield more of the same. Never fill an empty shelf with the experiment's metrics: shortcut cards to those metrics' events are withheld here for exactly that reason.
        *
        * * `too_early` - too_early
        * * `no_separation` - no_separation
@@ -39654,7 +39658,8 @@ export namespace Schemas {
        * * `Skio` - Skio
        * * `Smartlead` - Smartlead
        * * `Substack` - Substack
-       * * `ElectricityMaps` - ElectricityMaps */
+       * * `ElectricityMaps` - ElectricityMaps
+       * * `Amplemarket` - Amplemarket */
       readonly source_type: ExternalDataSourceTypeEnum;
       /** 'direct' for pure live-query sources; 'warehouse' for synced sources with direct query enabled.
        *
@@ -41032,7 +41037,8 @@ export namespace Schemas {
        * * `Skio` - Skio
        * * `Smartlead` - Smartlead
        * * `Substack` - Substack
-       * * `ElectricityMaps` - ElectricityMaps */
+       * * `ElectricityMaps` - ElectricityMaps
+       * * `Amplemarket` - Amplemarket */
       source_type: ExternalDataSourceTypeEnum;
       /** Connection credentials. Keys depend on source_type. Add a 'schemas' array to pick which tables sync; omit it and every discovered table syncs with default settings. */
       payload: ExternalDataSourceCreatePayload;
@@ -46581,6 +46587,27 @@ export namespace Schemas {
       quantile?: number | null;
     }
 
+    export type MetricsReducer = typeof MetricsReducer[keyof typeof MetricsReducer];
+
+
+    export const MetricsReducer = {
+      Last: 'last',
+      Mean: 'mean',
+      Min: 'min',
+      Max: 'max',
+      Sum: 'sum',
+      Delta: 'delta',
+    } as const;
+
+    export type MetricsNullMode = typeof MetricsNullMode[keyof typeof MetricsNullMode];
+
+
+    export const MetricsNullMode = {
+      Gap: 'gap',
+      Zero: 'zero',
+      Connect: 'connect',
+    } as const;
+
     export type MetricsStatSummary = typeof MetricsStatSummary[keyof typeof MetricsStatSummary];
 
 
@@ -46590,6 +46617,13 @@ export namespace Schemas {
       Total: 'total',
     } as const;
 
+    export interface MetricsThreshold {
+      /** A named color token (e.g. "green", "red"), never raw hex, so light and dark themes both work. */
+      color: string;
+      /** Lower bound of this band. The lowest step is the base color below every other step. */
+      value: number;
+    }
+
     export type MetricsDisplayType = typeof MetricsDisplayType[keyof typeof MetricsDisplayType];
 
 
@@ -46598,6 +46632,10 @@ export namespace Schemas {
       Area: 'area',
       Bar: 'bar',
       Stat: 'stat',
+      Gauge: 'gauge',
+      Bargauge: 'bargauge',
+      Table: 'table',
+      Heatmap: 'heatmap',
     } as const;
 
     export type MetricsAxisScale = typeof MetricsAxisScale[keyof typeof MetricsAxisScale];
@@ -46620,16 +46658,27 @@ export namespace Schemas {
 
     export interface MetricsDisplaySettings {
       goalLines?: GoalLine[] | null;
+      /** Time-series panels only: which reducers the legend table shows. Empty means no legend calcs. */
+      legendCalcs?: MetricsReducer[] | null;
+      /** How a null bucket renders on a time-series chart. */
+      nullMode?: MetricsNullMode | null;
+      /** How scalar panels and legend calcs collapse a series to one number. */
+      reduce?: MetricsReducer | null;
       /** `stat` display only: which summary the headline value shows. */
       statSummary?: MetricsStatSummary | null;
+      /** Color bands for the scalar panels. Sorted by `value` at read time, so entry order does not matter. */
+      thresholds?: MetricsThreshold[] | null;
       type?: MetricsDisplayType | null;
+      /** UCUM unit string as OTel writes it, e.g. "By", "ms", "%". Defaults from the response unit. */
+      unit?: string | null;
       yAxis?: MetricsYAxisSettings | null;
     }
 
     export interface MetricsQueryPoint {
       /** Bucket start, ISO 8601 */
       time: string;
-      value: number;
+      /** The bucket's aggregate; null when it isn't representable (a gap). */
+      value: number | null;
     }
 
     /**
@@ -46644,6 +46693,8 @@ export namespace Schemas {
       labels: MetricsQuerySeriesLabels;
       metricName?: string | null;
       points: MetricsQueryPoint[];
+      /** UCUM unit of the metric as ingested, e.g. "By", "ms", "1". Empty when the SDK did not set one. */
+      unit?: string | null;
     }
 
     export interface MetricsQueryResponse {
@@ -74869,6 +74920,18 @@ export namespace Schemas {
     }
 
     /**
+     * Response when the GitHub App cannot read pull request checks.
+     */
+    export interface PullRequestChecksPermissionError {
+      /** Stable code for a missing GitHub Checks permission. */
+      readonly code: string;
+      /** What the GitHub App permission prevents. */
+      readonly error: string;
+      /** Project integrations settings where a project admin can reconnect GitHub. */
+      readonly remediation_url: string;
+    }
+
+    /**
      * Response for the PR checks endpoint — the CI status of a report's implementation PR.
      */
     export interface PullRequestChecksResponse {
@@ -79290,6 +79353,39 @@ export namespace Schemas {
       cacheAgeSeconds: number;
       /** Scan evidence details */
       scan?: ScanEvidence;
+    }
+
+    export interface RescoreRequest {
+      /** Organization to re-score, from the $group_key of the wizard's $groupidentify event. */
+      organization_id: string;
+    }
+
+    /**
+     * * `disabled` - disabled
+     * * `no_enrichment_record` - no_enrichment_record
+     * * `dispatch_backlog_full` - dispatch_backlog_full
+     * * `dispatch_failed` - dispatch_failed
+     */
+    export type RescoreResponseReasonEnum = typeof RescoreResponseReasonEnum[keyof typeof RescoreResponseReasonEnum];
+
+
+    export const RescoreResponseReasonEnum = {
+      Disabled: 'disabled',
+      NoEnrichmentRecord: 'no_enrichment_record',
+      DispatchBacklogFull: 'dispatch_backlog_full',
+      DispatchFailed: 'dispatch_failed',
+    } as const;
+
+    export interface RescoreResponse {
+      /** Whether the re-score workflow was dispatched. */
+      queued: boolean;
+      /** Why nothing was dispatched. Null when queued.
+       *
+       * * `disabled` - disabled
+       * * `no_enrichment_record` - no_enrichment_record
+       * * `dispatch_backlog_full` - dispatch_backlog_full
+       * * `dispatch_failed` - dispatch_failed */
+      reason: RescoreResponseReasonEnum | null;
     }
 
     export interface ResetPasswordResponse {
@@ -84335,7 +84431,8 @@ export namespace Schemas {
        * * `Skio` - Skio
        * * `Smartlead` - Smartlead
        * * `Substack` - Substack
-       * * `ElectricityMaps` - ElectricityMaps */
+       * * `ElectricityMaps` - ElectricityMaps
+       * * `Amplemarket` - Amplemarket */
       source_type: ExternalDataSourceTypeEnum;
       /** Connection details as flat keys for the source_type — the same fields the create flow accepts (host, port, password, API key, …). Checked against a live connection before being stored. */
       payload: SourceCredentialCreatePayload;
@@ -85729,7 +85826,8 @@ export namespace Schemas {
        * * `Skio` - Skio
        * * `Smartlead` - Smartlead
        * * `Substack` - Substack
-       * * `ElectricityMaps` - ElectricityMaps */
+       * * `ElectricityMaps` - ElectricityMaps
+       * * `Amplemarket` - Amplemarket */
       source_type: ExternalDataSourceTypeEnum;
       /** Source config as flat keys. For source_type 'Custom': 'manifest_json' (a stringified RESTAPIConfig describing client.base_url, auth, and resources) plus the credential for the manifest's declared auth type — 'auth_token' (bearer), 'auth_api_key' (api_key), or 'auth_password' (http_basic). Secrets stay in these auth_* keys, never inline in the manifest. */
       payload?: SourcePreviewRequestPayload;
@@ -87105,7 +87203,8 @@ export namespace Schemas {
        * * `Skio` - Skio
        * * `Smartlead` - Smartlead
        * * `Substack` - Substack
-       * * `ElectricityMaps` - ElectricityMaps */
+       * * `ElectricityMaps` - ElectricityMaps
+       * * `Amplemarket` - Amplemarket */
       source_type: ExternalDataSourceTypeEnum;
       /** Connection details as flat keys for the source_type (discover required fields with the wizard tool). Prefer references over raw secrets: pass {'credential_id': <id>} referencing the connection details the user stored via the connect-link page (discover ids with the stored_credentials endpoint) — they are merged in server-side and deleted once consumed. An already-connected OAuth integration can be passed via its id key instead (e.g. {'hubspot_integration_id': 123}). For source_type 'Custom' (a user-defined REST API) the keys are 'manifest_json' (a stringified RESTAPIConfig describing client.base_url, auth, and resources) plus the credential for the auth type the manifest declares — 'auth_token' (bearer), 'auth_api_key' (api_key), or 'auth_password' (http_basic); keep secrets in these auth_* keys, never inline in the manifest. A 'schemas' array is NOT required — all discovered tables are enabled automatically with sensible sync defaults. */
       payload?: SourceSetupPayload;
@@ -96607,6 +96706,8 @@ export namespace Schemas {
      * * `Survey` - Survey
      * * `EarlyAccessFeature` - EarlyAccessFeature
      * * `SessionRecordingPlaylist` - SessionRecordingPlaylist
+     * * `ReplayScanner` - ReplayScanner
+     * * `VisionAlertConfiguration` - VisionAlertConfiguration
      * * `Comment` - Comment
      * * `Team` - Team
      * * `Project` - Project
@@ -96707,6 +96808,8 @@ export namespace Schemas {
       Survey: 'Survey',
       EarlyAccessFeature: 'EarlyAccessFeature',
       SessionRecordingPlaylist: 'SessionRecordingPlaylist',
+      ReplayScanner: 'ReplayScanner',
+      VisionAlertConfiguration: 'VisionAlertConfiguration',
       Comment: 'Comment',
       Team: 'Team',
       Project: 'Project',
@@ -96793,6 +96896,8 @@ export namespace Schemas {
      * * `Survey` - Survey
      * * `EarlyAccessFeature` - EarlyAccessFeature
      * * `SessionRecordingPlaylist` - SessionRecordingPlaylist
+     * * `ReplayScanner` - ReplayScanner
+     * * `VisionAlertConfiguration` - VisionAlertConfiguration
      * * `Comment` - Comment
      * * `Team` - Team
      * * `Project` - Project
@@ -96881,6 +96986,8 @@ export namespace Schemas {
       Survey: 'Survey',
       EarlyAccessFeature: 'EarlyAccessFeature',
       SessionRecordingPlaylist: 'SessionRecordingPlaylist',
+      ReplayScanner: 'ReplayScanner',
+      VisionAlertConfiguration: 'VisionAlertConfiguration',
       Comment: 'Comment',
       Team: 'Team',
       Project: 'Project',
@@ -105709,6 +105816,13 @@ export namespace Schemas {
      */
     ci_status?: TasksListCiStatus;
     /**
+     * Filter by the client that created the task
+     *
+     * * `posthog_desktop` - PostHog Desktop
+     * @minLength 1
+     */
+    client_provenance?: TasksListClientProvenance;
+    /**
      * Filter to tasks carrying a thread comment written by this user ID.
      */
     commented_by?: number;
@@ -105848,6 +105962,13 @@ export namespace Schemas {
       Failing: 'failing',
       Pending: 'pending',
       None: 'none',
+    } as const;
+
+    export type TasksListClientProvenance = typeof TasksListClientProvenance[keyof typeof TasksListClientProvenance];
+
+
+    export const TasksListClientProvenance = {
+      PosthogDesktop: 'posthog_desktop',
     } as const;
 
     export type TasksListExcludeOriginProduct = typeof TasksListExcludeOriginProduct[keyof typeof TasksListExcludeOriginProduct];
