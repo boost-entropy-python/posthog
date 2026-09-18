@@ -198,6 +198,15 @@ async fn tag_cols_of(db: &Db, table: &str, alias: &str) -> String {
 
 /// `route=/api/x,service=web` (or `key:value`) into pairs; keys are lower-cased and
 /// values are percent-decoded, so a value holding a comma travels as `%2C`.
+pub fn split_list(csv: Option<&str>) -> Vec<String> {
+    csv.unwrap_or("")
+        .split(',')
+        .map(str::trim)
+        .filter(|s| !s.is_empty())
+        .map(str::to_owned)
+        .collect()
+}
+
 pub fn parse_tag_filter(s: &str) -> Result<Vec<(String, String)>> {
     let mut out = Vec::new();
     for part in s.split(',').map(str::trim).filter(|p| !p.is_empty()) {
@@ -262,6 +271,7 @@ pub async fn query_detail(
     from: Ts,
     to: Ts,
     bucket: &str,
+    datname: Option<&str>,
 ) -> Result<Value> {
     let interval = bucket_interval(bucket);
     // Latency histograms are per minute, so the finest latency bucket is a minute.
@@ -275,14 +285,14 @@ pub async fn query_detail(
     } else {
         "NULL::jsonb AS tags"
     };
-    let texts = opt(db, &format!("SELECT datname, query, fingerprint, truncated, first_seen, last_seen, {query_tags} FROM cur_queries WHERE server_id = $1 AND queryid = $2"), &[&server, &queryid]).await?;
+    let texts = opt(db, &format!("SELECT datname, query, fingerprint, truncated, first_seen, last_seen, {query_tags} FROM cur_queries WHERE server_id = $1 AND queryid = $2 AND ($3::text IS NULL OR datname = $3)"), &[&server, &queryid, &datname]).await?;
     let fingerprint: Option<i64> = texts.first().and_then(|t| json_i64(&t["fingerprint"]));
     let series = opt(db, &format!("SELECT {b} AS bucket, instance, datname,
                 sum(calls)::bigint AS calls, sum(total_exec_time)::float8 AS total_ms,
                 CASE WHEN sum(calls) > 0 THEN sum(total_exec_time) / sum(calls) END::float8 AS mean_ms,
                 sum(rows)::bigint AS rows, sum(shared_blks_read)::bigint AS shared_blks_read, sum(shared_blks_hit)::bigint AS shared_blks_hit
-         FROM ts_query_stats WHERE server_id = $1 AND queryid = $2 AND collected_at >= $3 AND collected_at < $4
-         GROUP BY 1, 2, 3 ORDER BY 1", b = bucket_expr("collected_at", interval)), &[&server, &queryid, &from, &to]).await?;
+         FROM ts_query_stats WHERE server_id = $1 AND queryid = $2 AND collected_at >= $3 AND collected_at < $4 AND ($5::text IS NULL OR datname = $5)
+         GROUP BY 1, 2, 3 ORDER BY 1", b = bucket_expr("collected_at", interval)), &[&server, &queryid, &from, &to, &datname]).await?;
     let sampling = log_sampling_settings(db, server).await?;
     // Each histogram row carries the sample rate it was collected under: a sampled
     // count stands for 1/rate statements, an always-logged one for itself. Edges
@@ -570,6 +580,28 @@ pub async fn wait_events(db: &Db, server: &str, from: Ts, to: Ts, bucket: &str) 
     Ok(json!({ "sampled": sampled, "measured_aurora": measured }))
 }
 
+/// Average active sessions per bucket, split by wait event type and summed over instances,
+/// with the host core count as the line load is compared against.
+pub async fn db_load(db: &Db, server: &str, from: Ts, to: Ts, bucket: &str) -> Result<Value> {
+    // Sample rows are split by database, user and query, so the average must divide the
+    // summed backends by the number of samples, not the number of rows.
+    let sql = format!(
+        "WITH samples AS (
+            SELECT {b} AS bucket, instance, count(DISTINCT collected_at) AS n
+            FROM ts_activity_samples WHERE server_id = $1 AND collected_at >= $2 AND collected_at < $3 GROUP BY 1, 2),
+         active AS (
+            SELECT {b} AS bucket, instance, coalesce(wait_event_type, 'CPU') AS wait_event_type, sum(backends) AS backends
+            FROM ts_activity_samples WHERE server_id = $1 AND collected_at >= $2 AND collected_at < $3 AND state = 'active' GROUP BY 1, 2, 3)
+         SELECT a.bucket, a.wait_event_type, round(sum(a.backends::float8 / s.n)::numeric, 2)::float8 AS avg_active_sessions
+         FROM active a JOIN samples s USING (bucket, instance) GROUP BY 1, 2 ORDER BY 1, 2",
+        b = bucket_expr("collected_at", bucket_interval(bucket))
+    );
+    let series = opt(db, &sql, &[&server, &from, &to]).await?;
+    let host = opt(db, "SELECT instance, round(sum(user_jiffies + nice_jiffies + system_jiffies + iowait_jiffies + idle_jiffies) / nullif(sum(interval_seconds), 0) / 100.0)::bigint AS ncpu
+         FROM ts_system_cpu WHERE server_id = $1 AND collected_at >= $2 AND collected_at < $3 AND interval_seconds > 0 GROUP BY 1", &[&server, &from, &to]).await?;
+    Ok(json!({ "bucket": bucket_interval(bucket), "series": series, "host": host }))
+}
+
 pub async fn current_activity(db: &Db, server: &str) -> Result<Value> {
     let sessions = opt(db, "SELECT * FROM ts_activity_sessions WHERE server_id = $1 AND collected_at = (SELECT max(collected_at) FROM ts_activity_sessions WHERE server_id = $1 AND collected_at > now() - interval '5 minutes') ORDER BY query_age_s DESC NULLS LAST", &[&server]).await?;
     let locks = opt(db, "SELECT * FROM ts_lock_waits WHERE server_id = $1 AND collected_at = (SELECT max(collected_at) FROM ts_lock_waits WHERE server_id = $1 AND collected_at > now() - interval '5 minutes') ORDER BY waiting_s DESC", &[&server]).await?;
@@ -649,10 +681,13 @@ pub async fn events(
     from: Ts,
     to: Ts,
     kind: Option<&str>,
+    exclude: &[String],
     limit: i64,
 ) -> Result<Value> {
-    Ok(json!(opt(db, "SELECT id, at, instance, datname, kind, subject, before, after FROM events WHERE server_id = $1 AND at >= $2 AND at < $3 AND ($4::text IS NULL OR kind LIKE $4)
-         ORDER BY at DESC LIMIT $5", &[&server, &from, &to, &kind, &limit]).await?))
+    // Excluded kinds are dropped before the limit, so frequent routine kinds cannot crowd out the rest.
+    Ok(json!(opt(db, "SELECT id, at, instance, datname, kind, subject, before, after FROM events
+         WHERE server_id = $1 AND at >= $2 AND at < $3 AND ($4::text IS NULL OR kind LIKE $4) AND NOT (kind LIKE ANY($5::text[]))
+         ORDER BY at DESC LIMIT $6", &[&server, &from, &to, &kind, &exclude, &limit]).await?))
 }
 
 pub async fn settings(db: &Db, server: &str, non_default_only: bool) -> Result<Value> {
@@ -682,9 +717,74 @@ pub async fn system(db: &Db, server: &str, from: Ts, to: Ts) -> Result<Value> {
                 round(((user_jiffies + nice_jiffies + system_jiffies + iowait_jiffies)::numeric / nullif(user_jiffies + nice_jiffies + system_jiffies + iowait_jiffies + idle_jiffies, 0)) * 100, 2)::float8 AS cpu_pct,
                 round((iowait_jiffies::numeric / nullif(user_jiffies + nice_jiffies + system_jiffies + iowait_jiffies + idle_jiffies, 0)) * 100, 2)::float8 AS iowait_pct
          FROM ts_system_cpu WHERE server_id = $1 AND collected_at >= $2 AND collected_at < $3 ORDER BY 1", &[&server, &from, &to]).await?;
+    let host = opt(db, "SELECT instance, round(sum(user_jiffies + nice_jiffies + system_jiffies + iowait_jiffies + idle_jiffies) / nullif(sum(interval_seconds), 0) / 100.0)::bigint AS ncpu,
+                sum(interval_seconds)::float8 AS covered_s
+         FROM ts_system_cpu WHERE server_id = $1 AND collected_at >= $2 AND collected_at < $3 AND interval_seconds > 0 GROUP BY 1", &[&server, &from, &to]).await?;
     let mem = opt(db, "SELECT collected_at, instance, mem_used_kb, mem_free_kb, mem_cached_kb, swap_used_kb, load1, load5 FROM ts_system_memory WHERE server_id = $1 AND collected_at >= $2 AND collected_at < $3 ORDER BY 1", &[&server, &from, &to]).await?;
-    let backends = opt(db, "SELECT instance, datname, usename, application_name, backend_type, sum(utime_jiffies + stime_jiffies)::bigint AS cpu_jiffies, max(rss_kb)::bigint AS max_rss_kb
-         FROM ts_backend_cpu WHERE server_id = $1 AND collected_at >= $2 AND collected_at < $3 GROUP BY 1, 2, 3, 4, 5 ORDER BY 6 DESC LIMIT 20", &[&server, &from, &to]).await?;
+
+    // A jiffy is 10 ms, and /proc/stat sums to 100 jiffies per core per second, which
+    // is where the core count comes from; `covered` counts each tick once.
+    const CPU_CTES: &str = "
+        WITH host AS (
+            SELECT instance, sum(user_jiffies + nice_jiffies + system_jiffies + iowait_jiffies + idle_jiffies) / nullif(sum(interval_seconds), 0) / 100.0 AS ncpu
+            FROM ts_system_cpu WHERE server_id = $1 AND collected_at >= $2 AND collected_at < $3 AND interval_seconds > 0 GROUP BY 1),
+        covered AS (
+            SELECT instance, sum(interval_seconds) AS covered_s
+            FROM (SELECT DISTINCT instance, collected_at, interval_seconds FROM ts_backend_cpu WHERE server_id = $1 AND collected_at >= $2 AND collected_at < $3) t GROUP BY 1)";
+    let by_user = opt(db, &format!("{CPU_CTES},
+        per_pid AS (
+            SELECT instance, datname, usename, application_name, backend_type, pid, backend_start, sum(utime_jiffies + stime_jiffies) AS jiffies
+            FROM ts_backend_cpu WHERE server_id = $1 AND collected_at >= $2 AND collected_at < $3 GROUP BY 1, 2, 3, 4, 5, 6, 7)
+        SELECT p.instance, p.datname, p.usename, p.application_name, p.backend_type,
+               (sum(p.jiffies) / 100.0)::float8 AS cpu_seconds,
+               (sum(p.jiffies) / 100.0 / nullif(c.covered_s, 0))::float8 AS avg_cores,
+               (sum(p.jiffies) / nullif(c.covered_s, 0) / nullif(h.ncpu, 0))::float8 AS host_pct,
+               count(*)::bigint AS backends,
+               (max(p.jiffies) / 100.0 / nullif(c.covered_s, 0))::float8 AS hottest_backend_cores
+        FROM per_pid p JOIN covered c ON c.instance = p.instance LEFT JOIN host h ON h.instance = p.instance
+        GROUP BY 1, 2, 3, 4, 5, c.covered_s, h.ncpu ORDER BY 6 DESC LIMIT 20"), &[&server, &from, &to]).await?;
+    let by_user_series = opt(db, "
+        WITH b AS (
+            SELECT collected_at, instance, interval_seconds,
+                   coalesce(usename, backend_type) || CASE WHEN coalesce(application_name, '') <> '' THEN ' (' || application_name || ')' ELSE '' END AS label,
+                   utime_jiffies + stime_jiffies AS jiffies
+            FROM ts_backend_cpu WHERE server_id = $1 AND collected_at >= $2 AND collected_at < $3 AND interval_seconds > 0),
+        top AS (SELECT label FROM b GROUP BY 1 ORDER BY sum(jiffies) DESC LIMIT 7)
+        SELECT b.collected_at, b.instance, CASE WHEN t.label IS NULL THEN 'other' ELSE b.label END AS label,
+               (sum(b.jiffies) / 100.0 / max(b.interval_seconds))::float8 AS cores
+        FROM b LEFT JOIN top t ON t.label = b.label GROUP BY 1, 2, 3 ORDER BY 1", &[&server, &from, &to]).await?;
+    let by_code_path = if has_column(db, "ts_backend_cpu", "tags").await {
+        opt(db, &format!("{CPU_CTES}
+            SELECT b.instance, b.tags,
+                   (sum(b.utime_jiffies + b.stime_jiffies) / 100.0)::float8 AS cpu_seconds,
+                   (sum(b.utime_jiffies + b.stime_jiffies) / 100.0 / nullif(c.covered_s, 0))::float8 AS avg_cores,
+                   (sum(b.utime_jiffies + b.stime_jiffies) / nullif(c.covered_s, 0) / nullif(h.ncpu, 0))::float8 AS host_pct,
+                   count(DISTINCT (b.pid, b.backend_start))::bigint AS backends
+            FROM ts_backend_cpu b JOIN covered c ON c.instance = b.instance LEFT JOIN host h ON h.instance = b.instance
+            WHERE b.server_id = $1 AND b.collected_at >= $2 AND b.collected_at < $3 AND b.tags IS NOT NULL AND b.tags <> '{{}}'::jsonb
+            GROUP BY 1, 2, c.covered_s, h.ncpu ORDER BY 3 DESC LIMIT 15"), &[&server, &from, &to]).await?
+    } else {
+        vec![]
+    };
+    let by_query = if has_column(db, "ts_backend_cpu", "query_id").await {
+        let query_tags = if has_column(db, "cur_queries", "tags").await {
+            "q.tags"
+        } else {
+            "NULL::jsonb AS tags"
+        };
+        opt(db, &format!("{CPU_CTES}
+            SELECT b.instance, b.datname, b.query_id AS queryid, q.query, {query_tags},
+                   (sum(b.utime_jiffies + b.stime_jiffies) / 100.0)::float8 AS cpu_seconds,
+                   (sum(b.utime_jiffies + b.stime_jiffies) / 100.0 / nullif(c.covered_s, 0))::float8 AS avg_cores,
+                   (sum(b.utime_jiffies + b.stime_jiffies) / nullif(c.covered_s, 0) / nullif(h.ncpu, 0))::float8 AS host_pct,
+                   count(DISTINCT (b.pid, b.backend_start))::bigint AS backends
+            FROM ts_backend_cpu b JOIN covered c ON c.instance = b.instance LEFT JOIN host h ON h.instance = b.instance
+                 LEFT JOIN cur_queries q ON q.server_id = $1 AND q.instance = b.instance AND q.queryid = b.query_id AND q.datname = b.datname
+            WHERE b.server_id = $1 AND b.collected_at >= $2 AND b.collected_at < $3 AND b.query_id IS NOT NULL
+            GROUP BY 1, 2, 3, 4, 5, c.covered_s, h.ncpu ORDER BY 6 DESC LIMIT 15"), &[&server, &from, &to]).await?
+    } else {
+        vec![]
+    };
     let checkpoints = opt(db, "SELECT log_time, log_stream, kind, buffers_written, buffers_pct, write_s, sync_s, total_s, distance_kb FROM ts_checkpoints WHERE server_id = $1 AND collected_at >= $2 AND collected_at < $3 ORDER BY log_time DESC LIMIT 50", &[&server, &from, &to]).await?;
     let bgw = opt(db, "SELECT instance, sum(checkpoints_timed)::bigint AS checkpoints_timed, sum(checkpoints_req)::bigint AS checkpoints_req, sum(buffers_checkpoint)::bigint AS buffers_checkpoint, sum(buffers_clean)::bigint AS buffers_clean, sum(buffers_alloc)::bigint AS buffers_alloc
          FROM ts_bgwriter WHERE server_id = $1 AND collected_at >= $2 AND collected_at < $3 GROUP BY 1", &[&server, &from, &to]).await?;
@@ -692,9 +792,11 @@ pub async fn system(db: &Db, server: &str, from: Ts, to: Ts) -> Result<Value> {
     let latency = opt(db, "SELECT datname, sum(commit_latency_us)::bigint AS commit_latency_us, sum(select_count)::bigint AS selects, sum(update_count)::bigint AS updates,
                 CASE WHEN sum(update_count) > 0 THEN sum(update_latency_us) / sum(update_count) END::float8 AS avg_update_latency_us
          FROM ts_aurora_db_latency WHERE server_id = $1 AND collected_at >= $2 AND collected_at < $3 GROUP BY 1", &[&server, &from, &to]).await?;
-    Ok(
-        json!({ "cpu": cpu, "memory": mem, "top_backends_by_cpu": backends, "checkpoints": checkpoints, "bgwriter": bgw, "aurora_replicas": repl, "aurora_db_latency": latency }),
-    )
+    Ok(json!({
+        "cpu": cpu, "host": host, "memory": mem,
+        "cpu_by_user": by_user, "cpu_by_user_series": by_user_series, "cpu_by_code_path": by_code_path, "cpu_by_query": by_query,
+        "checkpoints": checkpoints, "bgwriter": bgw, "aurora_replicas": repl, "aurora_db_latency": latency,
+    }))
 }
 
 pub async fn collector_health(db: &Db) -> Result<Value> {
