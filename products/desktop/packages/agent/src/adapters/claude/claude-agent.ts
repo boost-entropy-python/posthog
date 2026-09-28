@@ -2931,24 +2931,38 @@ export class ClaudeAcpAgent extends BaseAcpAgent {
     }
   }
 
+  private startupFailure(
+    step:
+      | "initialization"
+      | "resumption"
+      | "fork"
+      | "setup hooks"
+      | "model switch"
+      | "effort update"
+      | "fast mode update",
+    error: unknown,
+    errorData: Record<string, unknown>,
+  ): RequestError {
+    if (error instanceof RequestError) {
+      if (!error.message.startsWith("Session ")) {
+        error.message = `Session ${step} failed: ${error.message}`;
+      }
+      return error;
+    }
+    return new RequestError(-32603, `Session ${step} failed`, errorData);
+  }
+
   private async awaitStartupControl(
     step: "model switch" | "effort update" | "fast mode update",
     control: Promise<void>,
     errorData: Record<string, unknown>,
   ): Promise<void> {
-    let result: { result: "success"; value: void } | { result: "timeout" };
-    try {
-      result = await withTimeout(control, SESSION_VALIDATION_TIMEOUT_MS);
-    } catch (error) {
-      if (error instanceof Error) {
-        error.message = `Session ${step} failed: ${error.message}`;
-        throw error;
-      }
-      throw new RequestError(-32603, `Session ${step} failed`, {
-        ...errorData,
-        error,
-      });
-    }
+    const result = await withTimeout(
+      control,
+      SESSION_VALIDATION_TIMEOUT_MS,
+    ).catch((error: unknown) => {
+      throw this.startupFailure(step, error, errorData);
+    });
     if (result.result === "timeout") {
       throw new RequestError(
         -32603,
@@ -3325,7 +3339,11 @@ export class ClaudeAcpAgent extends BaseAcpAgent {
             errorDetail: serializeError(err),
           },
         );
-        throw err;
+        throw this.startupFailure(forkSession ? "fork" : "resumption", err, {
+          sessionId,
+          taskId,
+          taskRunId: meta?.taskRunId,
+        });
       }
     }
 
@@ -3413,7 +3431,13 @@ export class ClaudeAcpAgent extends BaseAcpAgent {
           ),
           errorDetail: serializeError(err),
         });
-        throw err;
+        throw this.startupFailure(
+          initializationPhase === "setup_hooks"
+            ? "setup hooks"
+            : "initialization",
+          err,
+          { sessionId, taskId, taskRunId: meta?.taskRunId },
+        );
       }
     }
 
@@ -3589,10 +3613,14 @@ export class ClaudeAcpAgent extends BaseAcpAgent {
    *  persistent list shows each chip once across all turns. */
   private recordSessionResources(products: PostHogProductId[]): void {
     if (!this.session) return;
-    const added = products.filter((p) => !this.session.sessionResources.has(p));
+    const sessionResources = this.session.sessionResources;
+    const added = products.filter((p) => !sessionResources.has(p));
     if (added.length === 0) return;
-    for (const product of added) this.session.sessionResources.add(product);
-    void this.emitResourcesUsed(added);
+    for (const product of added) sessionResources.add(product);
+    void this.emitResourcesUsed(added).catch((error) => {
+      for (const product of added) sessionResources.delete(product);
+      this.logger.warn("Failed to report used PostHog products", { error });
+    });
   }
 
   /** Emits newly-seen PostHog products as soon as they're used, so the client
@@ -3831,6 +3859,14 @@ export class ClaudeAcpAgent extends BaseAcpAgent {
     });
   }
 
+  private applyFlagSettingsInBackground(
+    settings: Parameters<Query["applyFlagSettings"]>[0],
+  ): void {
+    this.session.query.applyFlagSettings(settings).catch((error) => {
+      this.logger.warn("Failed to apply flag settings", { error });
+    });
+  }
+
   private rebuildEffortConfigOption(modelId: string): void {
     const effortOptions = getEffortOptions(modelId);
     const existingEffort = this.session.configOptions.find(
@@ -3844,7 +3880,7 @@ export class ClaudeAcpAgent extends BaseAcpAgent {
       if (this.session.effort) {
         this.session.effort = undefined;
         this.session.queryOptions.effort = undefined;
-        void this.session.query.applyFlagSettings({
+        this.applyFlagSettingsInBackground({
           effortLevel: undefined,
           ultracode: false,
         });
@@ -3864,9 +3900,7 @@ export class ClaudeAcpAgent extends BaseAcpAgent {
       const resolvedEffort = resolvedValue as EffortLevel;
       this.session.effort = resolvedEffort;
       this.session.queryOptions.effort = toSdkEffort(resolvedEffort);
-      void this.session.query.applyFlagSettings(
-        toEffortFlagSettings(resolvedEffort),
-      );
+      this.applyFlagSettingsInBackground(toEffortFlagSettings(resolvedEffort));
     }
 
     const effortConfig: SessionConfigOption = {
