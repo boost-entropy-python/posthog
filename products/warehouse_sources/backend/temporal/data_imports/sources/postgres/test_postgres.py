@@ -2616,6 +2616,12 @@ class TestIsConnectionLimitError:
                 'connection failed: connection to server at "10.0.0.1", port 5432 failed: '
                 "FATAL:  (EMAXCONNSESSION) max clients reached in session mode - max clients are limited to pool_size: 15"
             ),
+            # Supavisor's instance-wide sibling of EMAXCONNSESSION: the pooler's total client-facing
+            # connection count (across every tenant) hit its own cap, not just this tenant's pool.
+            psycopg.OperationalError(
+                'connection failed: connection to server at "10.0.0.1", port 6543 failed: '
+                "FATAL:  (EMAXCONN) max client connections reached, limit: 200"
+            ),
             # A pooler (PgBouncer-style) that caches an upstream login failure reveals the limit on
             # the first query as a ProtocolViolation, not an OperationalError — it must still be
             # recognised so the discovery retry recovers instead of surfacing it as captured noise.
@@ -2627,6 +2633,7 @@ class TestIsConnectionLimitError:
     )
     def test_connection_limit_errors_are_detected(self, error):
         assert _is_connection_limit_error(error) is True
+        assert _is_dropped_or_connect_timeout(error) is True
 
     @pytest.mark.parametrize(
         "error",
@@ -4629,20 +4636,46 @@ class TestCheckKeysetPagePlan:
     """The signal that says whether widening the seek is safe for a table."""
 
     @pytest.mark.parametrize(
-        "plan,warns",
+        "plan,warns,estimated_rows",
         [
-            ("Limit  (cost=0.29..8.31 rows=2)\n  ->  Index Scan using companies_pkey on companies", False),
-            ("Limit\n  ->  Index Only Scan using companies_pkey on companies", False),
+            ("Limit  (cost=0.29..8.31 rows=2)\n  ->  Index Scan using companies_pkey on companies", False, None),
+            ("Limit\n  ->  Index Only Scan using companies_pkey on companies", False, None),
             # A row filter pulled the planner onto another index, so the page cannot read in key
             # order and sorts the matched set — once per page, not once per load.
-            ("Limit\n  ->  Sort  (cost=1.0..2.0)\n        ->  Index Scan using idx_status", True),
-            ("Limit\n  ->  Incremental Sort\n        ->  Index Scan using idx_status", True),
+            ("Limit\n  ->  Sort  (cost=1.0..2.0)\n        ->  Index Scan using idx_status", True, None),
+            ("Limit\n  ->  Incremental Sort\n        ->  Index Scan using idx_status", True, None),
             # The key's index was not used at all.
-            ("Limit\n  ->  Seq Scan on companies  (cost=0.00..1.00)", True),
+            ("Limit\n  ->  Seq Scan on companies  (cost=0.00..1.00)", True, None),
+            # On a small table a seq scan and a sort are the planner's correct choice, not a trap.
+            (
+                "Limit  (cost=1.1..1.1 rows=4)\n  ->  Sort  (cost=1.1..1.1 rows=4)\n"
+                "        ->  Seq Scan on companies  (cost=0.00..1.05 rows=4)",
+                False,
+                None,
+            ),
+            ("Limit  (rows=1000)\n  ->  Seq Scan on companies  (rows=99999)", False, None),
+            ("Limit  (rows=1000)\n  ->  Seq Scan on companies  (rows=100000)", True, 100000),
+            # The page limit sits on the outer node, so the table size has to come from the largest estimate.
+            (
+                "Limit  (cost=90.0..90.1 rows=1000)\n  ->  Sort  (cost=90.0..95.0 rows=2500000)\n"
+                "        ->  Seq Scan on companies  (cost=0.00..40.0 rows=2500000)",
+                True,
+                2500000,
+            ),
         ],
-        ids=["index_scan", "index_only_scan", "sort", "incremental_sort", "seq_scan"],
+        ids=[
+            "index_scan",
+            "index_only_scan",
+            "sort",
+            "incremental_sort",
+            "seq_scan",
+            "small_table_seq_scan_and_sort",
+            "just_below_threshold",
+            "at_threshold",
+            "large_table_sort",
+        ],
     )
-    def test_warns_only_when_the_page_is_not_an_index_scan_in_key_order(self, plan, warns):
+    def test_warns_only_when_the_page_is_not_an_index_scan_in_key_order(self, plan, warns, estimated_rows):
         cursor = mock.MagicMock()
         cursor.fetchall.return_value = [(line,) for line in plan.split("\n")]
         logger = mock.MagicMock()
@@ -4650,6 +4683,8 @@ class TestCheckKeysetPagePlan:
         _check_keyset_page_plan(cursor, sql.SQL("SELECT 1"), logger)  # type: ignore[arg-type]
 
         assert logger.warning.called is warns
+        if warns:
+            assert f"estimated_rows={estimated_rows}" in logger.warning.call_args.args[0]
 
     def test_swallows_an_explain_failure(self):
         # Diagnostics must never fail the page that follows.
